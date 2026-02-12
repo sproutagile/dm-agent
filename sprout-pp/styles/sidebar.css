@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :host {
+    /* MCP Design System - Color Tokens */
+    --background: 0 0% 100%;
+    /* white-50 */
+    --foreground: 222.2 84% 4.9%;
+    /* dark text */
+
+    --primary: 142 76% 36%;
+    /* kangkong-500: #22C558 */
+    --primary-foreground: 0 0% 100%;
+    /* white-50 */
+
+    --secondary: 210 40% 96.1%;
+    /* mushroom-50 */
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* mushroom-900 */
+
+    --muted: 239 10% 93%;
+    /* mushroom-100 */
+    --muted-foreground: 215.4 16.3% 46.9%;
+    /* mushroom-500 */
+
+    --accent: 210 40% 96.1%;
+    /* mushroom-100 */
+    --accent-foreground: 222.2 47.4% 11.2%;
+    /* mushroom-900 */
+
+    --border: 214.3 31.8% 91.4%;
+    /* mushroom-200 */
+    --input: 214.3 31.8% 91.4%;
+    /* mushroom-300 */
+    --ring: 142 76% 36%;
+    /* kangkong-500 for focus rings */
+
+    --destructive: 0 84.2% 60.2%;
+    /* tomato-500 */
+    --destructive-foreground: 0 0% 100%;
+    /* white-50 */
+
+    --radius: 0.5rem;
+  }
+}
+
+@layer components {
+  .ai-response-stream {
+    @apply sprout-animate-typing;
+  }
+
+  /* Hide scrollbar while maintaining scroll functionality */
+  .sprout-scrollbar-hide {
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE and Edge */
+  }
+
+  .sprout-scrollbar-hide::-webkit-scrollbar {
+    display: none;
+    /* Chrome, Safari, Opera */
+  }
+}
+
+/* Custom scrollbar for message list */
+.sprout-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sprout-scrollbar::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border-radius: 3px;
+}
+
+.sprout-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 3px;
+}
+
+.sprout-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}

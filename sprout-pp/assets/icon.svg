@@ -1,0 +1,21 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="64" fill="#22C55E"/>
+  
+  <!-- Sprout stem -->
+  <path d="M64 90 Q64 70, 64 50" stroke="white" stroke-width="6" stroke-linecap="round" fill="none"/>
+  
+  <!-- Left leaf -->
+  <path d="M64 60 Q50 55, 45 45 Q48 58, 64 60" fill="white"/>
+  
+  <!-- Right leaf -->
+  <path d="M64 60 Q78 55, 83 45 Q80 58, 64 60" fill="white"/>
+  
+  <!-- Sparkle 1 -->
+  <circle cx="85" cy="35" r="3" fill="#FCD34D"/>
+  <path d="M85 28 L85 42 M78 35 L92 35" stroke="#FCD34D" stroke-width="2" stroke-linecap="round"/>
+  
+  <!-- Sparkle 2 -->
+  <circle cx="95" cy="55" r="2" fill="#FCD34D"/>
+  <path d="M95 50 L95 60 M90 55 L100 55" stroke="#FCD34D" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
