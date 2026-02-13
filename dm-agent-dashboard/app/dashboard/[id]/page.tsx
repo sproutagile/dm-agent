@@ -124,8 +124,18 @@ export default function DashboardPage() {
 
                     if (!WidgetContent) return null;
 
+                    // Determine column span
+                    let colSpan = 1;
+                    if (dynamicWidgets[graphId] && dynamicWidgets[graphId].colSpan) {
+                        colSpan = dynamicWidgets[graphId].colSpan;
+                    }
+
                     return (
-                        <div key={graphId} className="relative group min-h-[320px]">
+                        <div
+                            key={graphId}
+                            className={`relative group min-h-[320px] ${colSpan === 2 ? 'md:col-span-2' : colSpan === 3 ? 'md:col-span-2 lg:col-span-3' : ''
+                                }`}
+                        >
                             {/* Remove Button - Hidden during export usually, but html2canvas might capture it if not handled. 
                                 We can use data-html2canvas-ignore attribute to exclude it from PDF. 
                             */}

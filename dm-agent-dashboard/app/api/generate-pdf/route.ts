@@ -16,8 +16,8 @@ export async function POST(req: Request) {
         });
         const page = await browser.newPage();
 
-        // set viewport to something reasonable for A4
-        await page.setViewport({ width: 1240, height: 1754, deviceScaleFactor: 2 });
+        // set viewport to landscape width to trigger desktop breakpoints
+        await page.setViewport({ width: 1440, height: 1200, deviceScaleFactor: 2 });
 
         // Construct complete HTML with styles
         const fullHtml = `
@@ -29,13 +29,12 @@ export async function POST(req: Request) {
                         * { box-sizing: border-box; }
                         body { background: white; -webkit-print-color-adjust: exact; font-family: sans-serif; }
                         
-                        /* Ensure grid layout is preserved but items don't break */
+                        /* Force single column layout for PDF to ensure full width and no clipping */
                         .grid { 
                             display: grid !important; 
                             gap: 2rem !important; 
-                            grid-template-columns: 1fr !important; /* Force single column to prevent clipping */
                             width: 100% !important;
-                            max-width: 100% !important;
+                            grid-template-columns: 1fr !important; 
                         }
 
                         /* Widget containers */
@@ -45,28 +44,32 @@ export async function POST(req: Request) {
                             border: 1px solid #e5e7eb;
                             border-radius: 0.5rem;
                             background: white;
-                            height: auto !important; 
-                            width: 100% !important;
                             overflow: visible !important;
-                            padding: 1rem;
+                            padding: 1.5rem;
+                        }
+
+                        /* Reset col spans since we are using single column */
+                        .md\\:col-span-2, .lg\\:col-span-3 { 
+                            grid-column: span 1 / span 1 !important; 
                         }
 
                         /* Ensure SVGs don't get cut off */
                         svg {
                             overflow: visible !important;
-                            max-width: 100% !important;
-                            height: auto !important;
                         }
 
-                        /* Chart specific adjustments */
+                        /* Chart specific adjustments - Fixed height for consistency */
                         .recharts-responsive-container {
                             width: 100% !important;
-                            height: 400px !important; /* Increased height for better visibility */
+                            min-height: 400px !important;
                         }
+
+                        /* Hide non-printable elements */
+                        .print\\:hidden { display: none !important; }
                     </style>
                 </head>
                 <body>
-                    <div id="pdf-content" style="padding: 20px;">
+                    <div id="pdf-content" style="padding: 40px;">
                         ${html}
                     </div>
                 </body>
@@ -74,6 +77,9 @@ export async function POST(req: Request) {
         `;
 
         await page.setContent(fullHtml, { waitUntil: 'networkidle0' });
+
+        // Add a delay to ensure charts finish animating/rendering
+        await new Promise(r => setTimeout(r, 2000));
 
         const pdfBuffer = await page.pdf({
             format: 'A4',

@@ -4,6 +4,7 @@ export interface Widget {
     chartType?: 'bar' | 'line' | 'area' | 'pie';
     title: string;
     data: ChartDataPoint[];
+    colSpan?: number; // 1 (default), 2, or 3
 }
 
 export interface ChartDataPoint {

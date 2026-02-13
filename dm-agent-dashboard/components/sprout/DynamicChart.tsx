@@ -36,6 +36,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editTitle, setEditTitle] = useState(widget.title);
     const [editType, setEditType] = useState(widget.chartType || 'bar');
+    const [editColSpan, setEditColSpan] = useState(widget.colSpan || 1);
     // State for user-friendly data editing
     const [dataRows, setDataRows] = useState<Array<{ name: string; value: string | number }>>(
         Array.isArray(widget.data) ? widget.data : []
@@ -50,6 +51,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
         updateDynamicWidget(widget.id, {
             title: editTitle,
             chartType: editType,
+            colSpan: editColSpan,
             data: cleanData
         });
         setIsEditing(false);
@@ -74,6 +76,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
     const startEditing = () => {
         setEditTitle(widget.title);
         setEditType(widget.chartType || 'bar');
+        setEditColSpan(widget.colSpan || 1);
         setDataRows(Array.isArray(widget.data) ? widget.data : []);
         setIsEditing(true);
     };
@@ -294,6 +297,21 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                     </div>
 
                     <div className="flex justify-end gap-2 pt-2 border-t mt-4">
+                        <div className="flex-1 flex items-center gap-2">
+                            <span className="text-sm font-medium">Width:</span>
+                            <div className="flex gap-1">
+                                {[1, 2, 3].map((span) => (
+                                    <button
+                                        key={span}
+                                        onClick={() => setEditColSpan(span)}
+                                        className={`px-2 py-1 text-xs border rounded ${editColSpan === span ? 'bg-blue-100 border-blue-500 text-blue-700' : 'bg-white text-gray-600 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        {span === 1 ? 'Regular' : span === 2 ? 'Wide' : 'Full'}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                         <button
                             onClick={() => setIsEditing(false)}
                             className="px-4 py-2 text-sm border rounded-md hover:bg-gray-50"

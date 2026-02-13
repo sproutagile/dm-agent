@@ -126,7 +126,7 @@ export default function InsightsPage() {
                                                                     onClick={() => !alreadyAdded && handleAddToDashboard(dashboard.id, insight.widgetId)}
                                                                     disabled={alreadyAdded}
                                                                     className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${alreadyAdded
-                                                                        ? "text-muted-foreground cursor-not-allowed"
+                                                                        ? "text-muted-foreground cursor-not-allowed bg-gray-50"
                                                                         : "text-foreground hover:bg-gray-50"
                                                                         }`}
                                                                 >
@@ -150,23 +150,23 @@ export default function InsightsPage() {
                                             </div>
                                         </div>
                                     ) : (
-                                        /* Add Button */
-                                        <>
+                                        /* Add / Manage Button */
+                                        <button
+                                            onClick={() => setSelectedGraphForAdd(insight.id)}
+                                            className={`flex items-center gap-1.5 px-3 py-2 text-white rounded-lg hover:opacity-90 transition-opacity shadow-md text-sm font-medium ${isAdded ? 'bg-[#22C558]' : 'bg-blueberry'}`}
+                                        >
                                             {isAdded ? (
-                                                <span className="flex items-center gap-1.5 px-3 py-2 bg-[#22C558] text-white rounded-lg text-sm font-medium shadow-md">
+                                                <>
                                                     <Check className="h-4 w-4" />
-                                                    Added
-                                                </span>
+                                                    Manage Dashboards
+                                                </>
                                             ) : (
-                                                <button
-                                                    onClick={() => setSelectedGraphForAdd(insight.id)}
-                                                    className="flex items-center gap-1.5 px-3 py-2 bg-blueberry text-white rounded-lg hover:opacity-90 transition-opacity shadow-md text-sm font-medium"
-                                                >
+                                                <>
                                                     <Plus className="h-4 w-4" />
                                                     Add to Dashboard
-                                                </button>
+                                                </>
                                             )}
-                                        </>
+                                        </button>
                                     )}
                                 </div>
 
