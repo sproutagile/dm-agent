@@ -1,10 +1,17 @@
 // Background service worker for handling extension icon clicks and API requests
 
-// Configuration
-// Configuration
-const N8N_WEBHOOK_URL = "https://agile.sprout.ph/webhook/049a56fd-7cf2-46b6-abe9-b24d41ecc092/chat"
+const DEFAULT_WEBHOOK_URL = "http://agile.sprout.ph/automations/webhook/049a56fd-7cf2-46b6-abe9-b24d41ecc092/chat"
 const DASHBOARD_API_URL = "http://localhost:3000/api/chat"
 const ENABLE_DASHBOARD_SYNC = false // Disabled for standalone mode
+
+// Initialize configuration on install
+chrome.runtime.onInstalled.addListener(async () => {
+    const result = await chrome.storage.local.get(["sprout_webhook_url"])
+    if (!result.sprout_webhook_url) {
+        await chrome.storage.local.set({ sprout_webhook_url: DEFAULT_WEBHOOK_URL })
+        console.log("[Sprout Extension] Initialized Webhook URL in storage")
+    }
+})
 
 // Open sidebar on icon click
 chrome.action.onClicked.addListener((tab) => {
@@ -29,7 +36,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
  * Main send handler - Standalone Mode
  */
 async function handleSend({ text, sessionId }: { text: string, sessionId: string }) {
-    console.log('[Sprout Extension] Standalone Mode - calling webhook:', N8N_WEBHOOK_URL)
+    // Get URL from storage
+    const result = await chrome.storage.local.get(["sprout_webhook_url"])
+    const webhookUrl = result.sprout_webhook_url || DEFAULT_WEBHOOK_URL
+
+    console.log('[Sprout Extension] Standalone Mode - calling webhook:', webhookUrl)
 
     // Inject system instruction to ensure JSON output
     const enrichedText = `${text}\n\n(IMPORTANT: You act as a data-aware assistant. You MUST output your response in valid JSON format ONLY. Do not wrap in markdown code blocks if possible, but if you do, I will parse it.
@@ -37,17 +48,38 @@ async function handleSend({ text, sessionId }: { text: string, sessionId: string
     Schema:
     {
       "message": "Your text response here...",
-      "type": "chart" | "kpi" | "text",
+      "type": "chart" | "scorecard" | "table" | "text",
       "chartType": "bar" | "line" | "area" | "pie",
-      "title": "Chart Title",
-      "data": [ { "name": "Label", "value": 10 } ]
+      "title": "Title of the widget",
+      "data": ... // Structure depends on type
     }
     
-    If the user asks for a chart or analysis, use "type": "chart" and provide "data".
+    Stats/Scorecard Example:
+    {
+      "type": "scorecard",
+      "title": "Avg Lead Time",
+      "data": { "title": "Avg Lead Time", "value": "12 days", "trend": { "value": "10%", "direction": "down" }, "icon": "time" }
+    }
+
+    Table Example:
+    {
+      "type": "table",
+      "title": "Recent Tickets",
+      "data": { "headers": ["ID", "Title", "Status"], "rows": [["1", "Fix bug", "Done"], ["2", "Deploy", "In Progress"]] }
+    }
+
+    Chart Example:
+    {
+      "type": "chart",
+      "chartType": "bar",
+      "title": "Velocity",
+      "data": [ { "name": "Sprint 1", "value": 10 } ]
+    }
+    
     If just text, use "type": "text" and omit "data".
     )`
 
-    return await callN8nWebhook(N8N_WEBHOOK_URL, enrichedText, sessionId)
+    return await callN8nWebhook(webhookUrl, enrichedText, sessionId)
 }
 
 /**

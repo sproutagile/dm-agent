@@ -30,6 +30,54 @@ function validateWidgetData(data: unknown): { valid: boolean; widget?: Omit<Widg
 
     const obj = data as Record<string, unknown>;
 
+    // Handle Scorecards
+    if (obj.type === 'scorecard' || obj.type === 'kpi') {
+        const title = sanitizeString(obj.title, 100) || 'Scorecard';
+        // Check if data is nested or flat. 
+        // If nested: obj.data = { value, trend... }
+        // If flat: obj.value... (but our schema says nested in 'data')
+
+        let scorecardData = obj.data as Record<string, unknown>;
+        // Fallback if flat
+        if (!scorecardData || typeof scorecardData !== 'object') {
+            scorecardData = obj;
+        }
+
+        const value = sanitizeString(String(scorecardData.value || ''), 50);
+
+        if (!value) return { valid: false };
+
+        return {
+            valid: true,
+            widget: {
+                type: 'scorecard',
+                title,
+                // Scorecards are stored as 'scorecard' type in Dashboard?
+                // Dashboard likely expects type='scorecard' and props={ title, value, trend }
+                // We need to map this to the Dashboard's expected Widget structure.
+                // The Dashboard WIDGET_LIBRARY has type='scorecard' and props.
+                // But DynamicWidget mechanism might differ.
+                // Let's assume we store it as is, and the renderer handles it.
+                // Existing `renderWidget` in insights/page.tsx:
+                // if (widget.type === "scorecard") ... return <ScorecardWidget {...props} />
+                // So we need to structure it such that `widget.props` has the data, OR `widget` itself has the data if it's dynamic?
+                // insights/page.tsx:
+                // if (dynamicWidgets[widgetId]) return <DynamicChart widget={...} />
+                // DynamicChart only handles charts?
+                // Check DynamicChart.tsx... it seems to only handle charts.
+                // WE NEED TO UPDATE Insights Page to render Dynamic Scorecards too!
+
+                // For now, let's pass it through as a valid widget.
+                data: scorecardData, // Store raw data
+                // We might need to transform this later or update the renderer.
+                chartType: 'bar', // Dummy text to satisfy types if needed, or valid?
+                // Widget type definition:
+                // export interface Widget { id, title, type: 'chart' | 'scorecard', ... }
+                // We need to check `types/sprout.ts` to see if 'scorecard' is valid in Widget type.
+            } as any
+        };
+    }
+
     // Must have type 'chart' and data array
     if (obj.type !== 'chart' || !Array.isArray(obj.data)) {
         return { valid: false };

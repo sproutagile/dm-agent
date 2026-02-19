@@ -54,7 +54,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
             // Use the configured webhook or default to the one in the proxy if empty but interval is set?
             // Actually, if it's empty, maybe we shouldn't fetch unless we rely on a default.
             // But the user gave a specific one, I'll assume if they set an interval, they want to use the proxy.
-            const endpoint = widget.webhookEndpoint || 'https://agile.sprout.ph/webhook/049a56fd-7cf2-46b6-abe9-b24d41ecc092/chat';
+            const endpoint = widget.webhookEndpoint || 'http://agile.sprout.ph/automations/webhook/049a56fd-7cf2-46b6-abe9-b24d41ecc092/chat';
 
             // Validate endpoint before fetching if standard fetch is used directly, 
             // but we use proxy. Proxy handles it.

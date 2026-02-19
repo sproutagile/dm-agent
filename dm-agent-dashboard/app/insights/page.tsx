@@ -48,7 +48,16 @@ export default function InsightsPage() {
     const renderWidget = (widgetId: string) => {
         // First check dynamic widgets (from Sprout)
         if (dynamicWidgets[widgetId]) {
-            return <DynamicChart widget={dynamicWidgets[widgetId]} />;
+            const widget = dynamicWidgets[widgetId];
+            if (widget.type === 'scorecard' || widget.type === 'kpi') {
+                // Dynamic Scorecard
+                // Map data to props. ScorecardWidget expects { title, value, trend }
+                // Our widget.data usually has these fields if it came from the extension
+                const props = widget.data as any;
+                // Ensure title is present, fallback to widget.title
+                return <ScorecardWidget title={widget.title} value={props.value} trend={props.trend} />;
+            }
+            return <DynamicChart widget={widget} />;
         }
 
         // Then check static widget library
