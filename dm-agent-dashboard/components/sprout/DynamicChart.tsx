@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Widget } from '@/types/sprout';
 import { useDashboard } from '@/components/DashboardContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,7 +21,7 @@ import {
     ResponsiveContainer,
     Legend,
 } from 'recharts';
-import { X, BarChart3, Pencil, Save, Plus, Trash2 } from 'lucide-react';
+import { X, BarChart3, Pencil, Save, Plus, Trash2, RefreshCw } from 'lucide-react';
 
 
 interface DynamicChartProps {
@@ -37,10 +37,77 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
     const [editTitle, setEditTitle] = useState(widget.title);
     const [editType, setEditType] = useState(widget.chartType || 'bar');
     const [editColSpan, setEditColSpan] = useState(widget.colSpan || 1);
+    const [editWebhook, setEditWebhook] = useState(widget.webhookEndpoint || '');
+    const [editRefreshInterval, setEditRefreshInterval] = useState(widget.refreshInterval || 0);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
     // State for user-friendly data editing
     const [dataRows, setDataRows] = useState<Array<{ name: string; value: string | number }>>(
         Array.isArray(widget.data) ? widget.data : []
     );
+
+    const fetchData = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            // Use the configured webhook or default to the one in the proxy if empty but interval is set?
+            // Actually, if it's empty, maybe we shouldn't fetch unless we rely on a default.
+            // But the user gave a specific one, I'll assume if they set an interval, they want to use the proxy.
+            const endpoint = widget.webhookEndpoint || 'https://agile.sprout.ph/webhook/049a56fd-7cf2-46b6-abe9-b24d41ecc092/chat';
+
+            // Validate endpoint before fetching if standard fetch is used directly, 
+            // but we use proxy. Proxy handles it.
+
+            const res = await fetch('/api/proxy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    endpoint: endpoint,
+                    id: widget.id,
+                    title: widget.title,
+                    type: widget.chartType
+                })
+            });
+
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || `Error ${res.status}: Failed to fetch data`);
+            }
+
+            const responseData = await res.json();
+
+            // Expecting { data: [...] } or just [...]
+            let newData = responseData.data || responseData;
+
+            if (Array.isArray(newData) && newData.length > 0) {
+                updateDynamicWidget(widget.id, { data: newData });
+                setError(null);
+            } else if (Array.isArray(newData) && newData.length === 0) {
+                // Empty array returned
+                setError("No data found from source");
+            } else {
+                // Invalid format
+                setError("Invalid data format received");
+            }
+        } catch (e: any) {
+            console.error("Auto-refresh error:", e);
+            setError(e.message || "No data source found");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (!widget.refreshInterval || widget.refreshInterval <= 0) return;
+
+        // Initial fetch if needed? Maybe not, just wait for interval.
+        // Or fetch immediately on mount if data is stale?
+        // simple interval for now.
+        const intervalId = setInterval(fetchData, widget.refreshInterval);
+        return () => clearInterval(intervalId);
+    }, [widget.refreshInterval, widget.webhookEndpoint, widget.id, widget.title, widget.chartType, updateDynamicWidget]);
+
 
     const handleSave = () => {
         // clean up data: convert value to numbers and remove empty rows
@@ -52,7 +119,9 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
             title: editTitle,
             chartType: editType,
             colSpan: editColSpan,
-            data: cleanData
+            data: cleanData,
+            webhookEndpoint: editWebhook,
+            refreshInterval: editRefreshInterval
         });
         setIsEditing(false);
     };
@@ -77,17 +146,57 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
         setEditTitle(widget.title);
         setEditType(widget.chartType || 'bar');
         setEditColSpan(widget.colSpan || 1);
+        setEditWebhook(widget.webhookEndpoint || '');
+        setEditRefreshInterval(widget.refreshInterval || 0);
         setDataRows(Array.isArray(widget.data) ? widget.data : []);
         setIsEditing(true);
     };
 
     const renderChart = () => {
         const chartData = widget.data;
+
+        // Only show "No data" if there is NO data AND no error (if error, we show error overlay on top of old data or empty state)
+        // Actually, if we have an error and no data, we should probably show the empty state + error.
+        // If we have data and error, we show data + error.
+
+        const hasData = chartData && chartData.length > 0;
+
+        if (!hasData) {
+            return (
+                <div className="flex flex-col items-center justify-center h-[280px] text-gray-400 relative">
+                    {error && (
+                        <div className="absolute top-2 left-2 right-2 bg-red-100 border border-red-200 text-red-700 px-4 py-2 rounded-md text-xs flex items-center justify-between z-10">
+                            <span>{error}</span>
+                            <button onClick={() => setError(null)} className="ml-2 hover:text-red-900"><X className="h-3 w-3" /></button>
+                        </div>
+                    )}
+                    <BarChart3 className="h-10 w-10 mb-2 opacity-20" />
+                    <span className="text-sm">No data available</span>
+                </div>
+            );
+        }
+
         const mainColor = chartData[0]?.fill || '#2D3A8C';
+
+        // Helper to wrap chart with error overlay if needed
+        const renderWithOverlay = (chart: React.ReactNode) => (
+            <div className="relative">
+                {error && (
+                    <div className="absolute top-0 right-0 left-0 mx-auto w-fit max-w-[90%] bg-red-50 border border-red-200 text-red-600 px-3 py-1 rounded-full text-xs flex items-center shadow-sm z-10 mt-2 animate-in fade-in slide-in-from-top-2">
+                        <span className="mr-2 h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
+                        <span className="truncate max-w-[200px]">{error}</span>
+                        <button onClick={() => setError(null)} className="ml-2 text-red-400 hover:text-red-700">
+                            <X className="h-3 w-3" />
+                        </button>
+                    </div>
+                )}
+                {chart}
+            </div>
+        );
 
         switch (widget.chartType || 'bar') {
             case 'line':
-                return (
+                return renderWithOverlay(
                     <ResponsiveContainer width="100%" height={280}>
                         <LineChart data={chartData}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -120,7 +229,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                 );
 
             case 'area':
-                return (
+                return renderWithOverlay(
                     <ResponsiveContainer width="100%" height={280}>
                         <AreaChart data={chartData}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -153,7 +262,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                 );
 
             case 'pie':
-                return (
+                return renderWithOverlay(
                     <ResponsiveContainer width="100%" height={280}>
                         <PieChart>
                             <Pie
@@ -182,7 +291,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                 );
 
             default: // bar chart
-                return (
+                return renderWithOverlay(
                     <ResponsiveContainer width="100%" height={280}>
                         <BarChart data={chartData}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -296,6 +405,33 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                         </div>
                     </div>
 
+                    <div className="space-y-2 pt-2 border-t">
+                        <h4 className="text-sm font-medium">Auto-Refresh</h4>
+                        <div className="grid grid-cols-1 gap-2">
+                            {/* Webhook URL Input Removed - Using Default Sprout Webhook */}
+
+                            <div className="flex items-center gap-2">
+                                <label className="text-sm whitespace-nowrap">Refresh every:</label>
+                                <select
+                                    className="p-2 border rounded-md text-sm flex-1"
+                                    value={editRefreshInterval}
+                                    onChange={(e) => {
+                                        const newVal = Number(e.target.value);
+                                        setEditRefreshInterval(newVal);
+                                        updateDynamicWidget(widget.id, { refreshInterval: newVal });
+                                    }}
+                                >
+                                    <option value={0}>Disabled</option>
+                                    <option value={10000}>10 seconds (Test)</option>
+                                    <option value={60000}>1 Minute</option>
+                                    <option value={300000}>5 Minutes</option>
+                                    <option value={900000}>15 Minutes</option>
+                                    <option value={3600000}>1 Hour</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
                     <div className="flex justify-end gap-2 pt-2 border-t mt-4">
                         <div className="flex-1 flex items-center gap-2">
                             <span className="text-sm font-medium">Width:</span>
@@ -343,6 +479,14 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                 </div>
                 <div className="flex gap-1">
                     <button
+                        onClick={fetchData}
+                        className={`p-1 rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-blue-600 ${isLoading ? 'animate-spin' : ''}`}
+                        title="Refresh Data"
+                        disabled={isLoading}
+                    >
+                        <RefreshCw className="h-4 w-4" />
+                    </button>
+                    <button
                         onClick={startEditing}
                         className="p-1 rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-blue-600"
                         title="Edit Chart"
@@ -360,7 +504,14 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                     )}
                 </div>
             </CardHeader>
-            <CardContent>{renderChart()}</CardContent>
+            <CardContent>
+                {isLoading && (
+                    <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    </div>
+                )}
+                {renderChart()}
+            </CardContent>
         </Card>
     );
 }

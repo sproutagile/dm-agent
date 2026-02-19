@@ -5,6 +5,9 @@ export interface Widget {
     title: string;
     data: ChartDataPoint[];
     colSpan?: number; // 1 (default), 2, or 3
+    refreshInterval?: number; // in milliseconds
+    webhookEndpoint?: string; // URL or identifier for data refresh
+    chartContext?: string; // Specific context/instruction for the AI (e.g. "Sprint 24 Tickets")
 }
 
 export interface ChartDataPoint {

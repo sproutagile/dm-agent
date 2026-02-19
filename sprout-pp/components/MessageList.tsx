@@ -54,6 +54,7 @@ export function MessageList({ messages, isLoading = false }: MessageListProps) {
                             role={message.role}
                             content={message.content}
                             isStreaming={message.isStreaming}
+                            data={message.data}
                         />
                     ))}
 

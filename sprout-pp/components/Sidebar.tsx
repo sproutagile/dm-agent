@@ -72,7 +72,7 @@ export function Sidebar({ onClose }: SidebarProps) {
             }
 
             // Add AI response
-            const aiMessage = createMessage("ai", reply)
+            const aiMessage = createMessage("ai", reply, false, data)
             setMessages(prev => [...prev, aiMessage])
         } catch (error) {
             console.error("Failed to get response:", error)

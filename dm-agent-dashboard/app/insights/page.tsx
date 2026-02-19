@@ -1,7 +1,7 @@
 "use client";
 
 import { useDashboard } from "@/components/DashboardContext";
-import { Sparkles, Plus, Check, X, Trash2 } from "lucide-react";
+import { Sparkles, Plus, Check, X, Trash2, Eye, BarChart3 } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { WIDGET_LIBRARY } from "@/data/mockMetrics";
 
@@ -15,6 +15,8 @@ import { TeamEfficiencyChart } from "@/components/charts/TeamEfficiencyChart";
 import { WorkflowEfficiencyChart } from "@/components/charts/WorkflowEfficiencyChart";
 import { DynamicChart } from "@/components/sprout/DynamicChart";
 import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 const WIDGET_COMPONENTS: Record<string, React.FC<any>> = {
     VelocityTrendChart,
@@ -25,8 +27,9 @@ const WIDGET_COMPONENTS: Record<string, React.FC<any>> = {
 };
 
 export default function InsightsPage() {
-    const { generatedInsights, dashboards, addGeneratedInsight, removeGeneratedInsight, addGraphToDashboard, dynamicWidgets } = useDashboard();
+    const { generatedInsights, dashboards, removeGeneratedInsight, addGraphToDashboard, dynamicWidgets } = useDashboard();
     const [selectedGraphForAdd, setSelectedGraphForAdd] = useState<string | null>(null);
+    const [viewingInsightId, setViewingInsightId] = useState<string | null>(null);
 
     const handleAddToDashboard = (dashboardId: string, widgetId: string) => {
         addGraphToDashboard(dashboardId, widgetId);
@@ -67,8 +70,17 @@ export default function InsightsPage() {
         return null;
     };
 
+    const viewingInsight = generatedInsights.find(i => i.id === viewingInsightId);
+
     return (
-        <div>
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <h1 className="text-2xl font-bold tracking-tight">AI Insights</h1>
+                <span className="text-sm text-muted-foreground bg-white px-3 py-1 rounded-full border">
+                    {generatedInsights.length} Saved Insights
+                </span>
+            </div>
+
             {generatedInsights.length === 0 ? (
                 /* Empty State */
                 <div className="border-2 border-dashed border-border bg-white rounded-xl p-16 flex flex-col items-center justify-center min-h-[500px]">
@@ -77,103 +89,131 @@ export default function InsightsPage() {
                     </div>
                     <h3 className="text-xl font-semibold text-foreground mb-2">No insights yet</h3>
                     <p className="text-muted-foreground text-center max-w-md mb-6">
-                        Use the Chrome Extension to generate new AI insights and send them here.
+                        Use the Chatbot to generate new charts and click "Add to Insight" to save them here.
                     </p>
                 </div>
             ) : (
-                /* Generated Insights */
-                <div className="space-y-6">
-                    {generatedInsights.map((insight) => {
-                        const isAdded = isWidgetInAnyDashboard(insight.widgetId);
+                /* Table View */
+                <div className="bg-white rounded-lg border shadow-sm">
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-gray-50 text-gray-500 font-medium border-b rounded-t-lg">
+                            <tr>
+                                <th className="px-6 py-3">Insight Title</th>
+                                <th className="px-6 py-3">Date Generated</th>
+                                <th className="px-6 py-3">Status</th>
+                                <th className="px-6 py-3 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {generatedInsights.map((insight) => {
+                                const isAdded = isWidgetInAnyDashboard(insight.widgetId);
 
-                        return (
-                            <div key={insight.id} className="relative">
-                                {/* Controls Bar */}
-                                <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
-                                    <span className="text-xs text-muted-foreground bg-mushroom px-2 py-1 rounded">
-                                        Generated at {insight.generatedAt}
-                                    </span>
-
-                                    {/* Delete Button */}
-                                    <button
-                                        onClick={() => removeGeneratedInsight(insight.id)}
-                                        className="p-2 rounded hover:bg-red-50 transition-colors"
-                                        title="Remove insight"
-                                    >
-                                        <Trash2 className="h-4 w-4 text-red-600" />
-                                    </button>
-
-                                    {selectedGraphForAdd === insight.id ? (
-                                        /* Dashboard Selection Dropdown */
-                                        <div className="relative">
-                                            <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-20">
-                                                <div className="px-4 py-2 border-b border-gray-200">
-                                                    <p className="text-sm font-semibold text-foreground">Add to Dashboard</p>
-                                                </div>
-                                                {dashboards.length === 0 ? (
-                                                    <div className="px-4 py-3 text-sm text-muted-foreground">
-                                                        No dashboards yet. Create one from the sidebar!
-                                                    </div>
-                                                ) : (
-                                                    <div className="max-h-60 overflow-y-auto">
-                                                        {dashboards.map((dashboard) => {
-                                                            const Icon = (LucideIcons as any)[dashboard.icon] || LucideIcons.LayoutDashboard;
-                                                            const alreadyAdded = isWidgetInDashboard(insight.widgetId, dashboard.id);
-
-                                                            return (
-                                                                <button
-                                                                    key={dashboard.id}
-                                                                    onClick={() => !alreadyAdded && handleAddToDashboard(dashboard.id, insight.widgetId)}
-                                                                    disabled={alreadyAdded}
-                                                                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${alreadyAdded
-                                                                        ? "text-muted-foreground cursor-not-allowed bg-gray-50"
-                                                                        : "text-foreground hover:bg-gray-50"
-                                                                        }`}
-                                                                >
-                                                                    <Icon className="h-4 w-4" />
-                                                                    <span className="flex-1 text-left">{dashboard.name}</span>
-                                                                    {alreadyAdded && <Check className="h-4 w-4 text-[#22C558]" />}
-                                                                </button>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                )}
-                                                <div className="px-4 py-2 border-t border-gray-200">
-                                                    <button
-                                                        onClick={() => setSelectedGraphForAdd(null)}
-                                                        className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded transition-colors"
-                                                    >
-                                                        <X className="h-4 w-4" />
-                                                        Cancel
-                                                    </button>
-                                                </div>
+                                return (
+                                    <tr key={insight.id} className="hover:bg-gray-50 transition-colors group">
+                                        <td className="px-6 py-4 font-medium text-gray-900 flex items-center gap-2">
+                                            <div className="p-1.5 bg-blue-50 rounded text-blue-600">
+                                                <BarChart3 className="h-4 w-4" />
                                             </div>
-                                        </div>
-                                    ) : (
-                                        /* Add / Manage Button */
-                                        <button
-                                            onClick={() => setSelectedGraphForAdd(insight.id)}
-                                            className={`flex items-center gap-1.5 px-3 py-2 text-white rounded-lg hover:opacity-90 transition-opacity shadow-md text-sm font-medium ${isAdded ? 'bg-[#22C558]' : 'bg-blueberry'}`}
-                                        >
+                                            {insight.label}
+                                        </td>
+                                        <td className="px-6 py-4 text-gray-500">
+                                            {insight.generatedAt}
+                                        </td>
+                                        <td className="px-6 py-4">
                                             {isAdded ? (
-                                                <>
-                                                    <Check className="h-4 w-4" />
-                                                    Manage Dashboards
-                                                </>
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                    <Check className="h-3 w-3" /> Added to Dashboard
+                                                </span>
                                             ) : (
-                                                <>
-                                                    <Plus className="h-4 w-4" />
-                                                    Add to Dashboard
-                                                </>
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                    Saved
+                                                </span>
                                             )}
-                                        </button>
-                                    )}
-                                </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <Dialog>
+                                                    <DialogTrigger asChild>
+                                                        <Button variant="outline" size="sm" className="gap-2">
+                                                            <Eye className="h-4 w-4" /> View Graph
+                                                        </Button>
+                                                    </DialogTrigger>
+                                                    <DialogContent className="max-w-3xl">
+                                                        <DialogHeader>
+                                                            <DialogTitle>{insight.label}</DialogTitle>
+                                                        </DialogHeader>
+                                                        <div className="mt-4">
+                                                            {renderWidget(insight.widgetId)}
+                                                        </div>
+                                                        <div className="flex justify-end mt-6 gap-2">
+                                                            {/* Dashboard Selection Logic reused here if needed, or keeping it simple */}
+                                                        </div>
+                                                    </DialogContent>
+                                                </Dialog>
 
-                                {renderWidget(insight.widgetId)}
-                            </div>
-                        );
-                    })}
+                                                <div className="relative">
+                                                    {selectedGraphForAdd === insight.id ? (
+                                                        <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                                                            <div className="px-4 py-2 border-b border-gray-200 bg-gray-50">
+                                                                <p className="text-xs font-semibold text-gray-500 uppercase">Select Dashboard</p>
+                                                            </div>
+                                                            <div className="max-h-60 overflow-y-auto">
+                                                                {dashboards.map((dashboard) => {
+                                                                    const Icon = (LucideIcons as any)[dashboard.icon] || LucideIcons.LayoutDashboard;
+                                                                    const alreadyAdded = isWidgetInDashboard(insight.widgetId, dashboard.id);
+
+                                                                    return (
+                                                                        <button
+                                                                            key={dashboard.id}
+                                                                            onClick={() => !alreadyAdded && handleAddToDashboard(dashboard.id, insight.widgetId)}
+                                                                            disabled={alreadyAdded}
+                                                                            className={`w-full flex items-center gap-3 px-4 py-2 text-sm transition-colors ${alreadyAdded
+                                                                                ? "text-gray-400 cursor-not-allowed bg-gray-50"
+                                                                                : "text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+                                                                                }`}
+                                                                        >
+                                                                            <Icon className="h-4 w-4" />
+                                                                            <span className="flex-1 text-left truncate">{dashboard.name}</span>
+                                                                            {alreadyAdded && <Check className="h-3 w-3 text-green-500" />}
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                            <div className="px-2 pt-2 mt-1 border-t">
+                                                                <button
+                                                                    onClick={() => setSelectedGraphForAdd(null)}
+                                                                    className="w-full flex items-center justify-center gap-2 px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-100 rounded transition-colors"
+                                                                >
+                                                                    Cancel
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <Button
+                                                            variant={isAdded ? "ghost" : "default"}
+                                                            size="sm"
+                                                            className={isAdded ? "text-green-600 hover:text-green-700 hover:bg-green-50" : "bg-[#2D3A8C] text-white hover:bg-blue-800"}
+                                                            onClick={() => setSelectedGraphForAdd(insight.id)}
+                                                        >
+                                                            {isAdded ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                                                        </Button>
+                                                    )}
+                                                </div>
+
+                                                <button
+                                                    onClick={() => removeGeneratedInsight(insight.id)}
+                                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                    title="Delete Insight"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
                 </div>
             )}
         </div>

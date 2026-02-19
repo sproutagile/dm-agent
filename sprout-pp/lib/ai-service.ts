@@ -6,6 +6,7 @@ export interface Message {
     content: string
     isStreaming?: boolean
     timestamp?: number
+    data?: any // Widget/Chart data
 }
 
 // Session Management
@@ -18,13 +19,14 @@ export function getSessionId(): string {
     return sessionId
 }
 
-export function createMessage(role: "user" | "ai", content: string, isStreaming = false): Message {
+export function createMessage(role: "user" | "ai", content: string, isStreaming = false, data?: any): Message {
     return {
         id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         role,
         content,
         isStreaming,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        data
     }
 }
 
