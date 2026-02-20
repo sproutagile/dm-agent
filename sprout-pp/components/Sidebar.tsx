@@ -12,16 +12,36 @@ interface SidebarProps {
 export function Sidebar({ onClose }: SidebarProps) {
     const [messages, setMessages] = useState<Message[]>([])
     const [isLoading, setIsLoading] = useState(false)
+    const [isHydrated, setIsHydrated] = useState(false) // Track if storage is loaded
     const sessionId = useRef(getSessionId())
 
-    // Initial welcome message
+    // Load messages from storage on mount
     useEffect(() => {
-        if (messages.length === 0) {
-            setMessages([
-                createMessage("ai", "Hello! I'm Sprout AI. How can I help you manage your delivery operations today?")
-            ])
+        if (!chrome.storage || !chrome.storage.local) {
+            setIsHydrated(true);
+            return;
         }
-    }, [])
+
+        chrome.storage.local.get(['sprout_chat_messages'], (result) => {
+            if (result.sprout_chat_messages && Array.isArray(result.sprout_chat_messages)) {
+                setMessages(result.sprout_chat_messages);
+            } else {
+                // Initial welcome message if no history
+                setMessages([
+                    createMessage("ai", "Hello! I'm Sprout AI. How can I help you manage your delivery operations today?")
+                ]);
+            }
+            setIsHydrated(true);
+        });
+    }, []);
+
+    // Save messages to storage whenever they change
+    useEffect(() => {
+        if (!isHydrated || !chrome.storage || !chrome.storage.local) return;
+
+        // Debounce or just save? Chat is low freq, direct save is fine.
+        chrome.storage.local.set({ 'sprout_chat_messages': messages });
+    }, [messages, isHydrated]);
 
     const handleSendMessage = useCallback(async (content: string) => {
         if (!content.trim()) return

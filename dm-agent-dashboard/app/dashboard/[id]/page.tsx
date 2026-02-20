@@ -2,7 +2,8 @@
 
 import { useParams } from "next/navigation";
 import { useDashboard } from "@/components/DashboardContext";
-import { Trash2 } from "lucide-react";
+import { Trash2, Globe } from "lucide-react";
+import { ShareDashboardButton } from "@/components/dashboard/ShareDashboardButton";
 
 // Widget Components
 import { ScorecardWidget } from "@/components/widgets/ScorecardWidget";
@@ -80,16 +81,18 @@ export default function DashboardPage() {
     return (
         <div className="space-y-6">
             {/* Header with Actions */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-                        {dashboard.name}
-                    </h1>
-                    <p className="text-sm text-gray-500">
-                        Manage and view your dashboard metrics here.
-                    </p>
+            <div className="flex justify-end mb-4">
+                <div className="flex items-center gap-2">
+                    {dashboard.is_public && (
+                        <span title="Public Dashboard" className="flex items-center text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-medium border border-green-200 mr-2">
+                            <Globe className="w-3 h-3 mr-1" /> Public
+                        </span>
+                    )}
+                    <ShareDashboardButton dashboard={dashboard} onUpdate={(updates) => {
+                        window.location.reload();
+                    }} />
+                    <ExportActions targetId="dashboard-content" dashboardName={dashboard.name} />
                 </div>
-                <ExportActions targetId="dashboard-content" dashboardName={dashboard.name} />
             </div>
 
             {/* Dashboard Content - Targeted for PDF Export */}

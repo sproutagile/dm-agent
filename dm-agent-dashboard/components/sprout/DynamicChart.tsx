@@ -277,7 +277,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                                 fill="#8884d8"
                                 dataKey="value"
                             >
-                                {chartData.map((entry, index) => (
+                                {chartData.map((entry: any, index: number) => (
                                     <Cell
                                         key={`cell-${index}`}
                                         fill={entry.fill || COLORS[index % COLORS.length]}
@@ -316,7 +316,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                                 radius={[4, 4, 0, 0]}
                                 maxBarSize={50}
                             >
-                                {chartData.map((entry, index) => (
+                                {chartData.map((entry: any, index: number) => (
                                     <Cell
                                         key={`cell-${index}`}
                                         fill={entry.fill || COLORS[index % COLORS.length]}

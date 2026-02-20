@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useSproutStore } from '@/store/useSproutStore';
-import { Widget } from '@/types/sprout';
 import { useDashboard } from '@/components/DashboardContext';
+import { Widget } from '@/types/sprout';
 
 // Allowed chart types - whitelist
 const ALLOWED_CHART_TYPES = ['bar', 'line', 'area', 'pie'] as const;
@@ -33,12 +32,7 @@ function validateWidgetData(data: unknown): { valid: boolean; widget?: Omit<Widg
     // Handle Scorecards
     if (obj.type === 'scorecard' || obj.type === 'kpi') {
         const title = sanitizeString(obj.title, 100) || 'Scorecard';
-        // Check if data is nested or flat. 
-        // If nested: obj.data = { value, trend... }
-        // If flat: obj.value... (but our schema says nested in 'data')
-
         let scorecardData = obj.data as Record<string, unknown>;
-        // Fallback if flat
         if (!scorecardData || typeof scorecardData !== 'object') {
             scorecardData = obj;
         }
@@ -52,28 +46,7 @@ function validateWidgetData(data: unknown): { valid: boolean; widget?: Omit<Widg
             widget: {
                 type: 'scorecard',
                 title,
-                // Scorecards are stored as 'scorecard' type in Dashboard?
-                // Dashboard likely expects type='scorecard' and props={ title, value, trend }
-                // We need to map this to the Dashboard's expected Widget structure.
-                // The Dashboard WIDGET_LIBRARY has type='scorecard' and props.
-                // But DynamicWidget mechanism might differ.
-                // Let's assume we store it as is, and the renderer handles it.
-                // Existing `renderWidget` in insights/page.tsx:
-                // if (widget.type === "scorecard") ... return <ScorecardWidget {...props} />
-                // So we need to structure it such that `widget.props` has the data, OR `widget` itself has the data if it's dynamic?
-                // insights/page.tsx:
-                // if (dynamicWidgets[widgetId]) return <DynamicChart widget={...} />
-                // DynamicChart only handles charts?
-                // Check DynamicChart.tsx... it seems to only handle charts.
-                // WE NEED TO UPDATE Insights Page to render Dynamic Scorecards too!
-
-                // For now, let's pass it through as a valid widget.
-                data: scorecardData, // Store raw data
-                // We might need to transform this later or update the renderer.
-                chartType: 'bar', // Dummy text to satisfy types if needed, or valid?
-                // Widget type definition:
-                // export interface Widget { id, title, type: 'chart' | 'scorecard', ... }
-                // We need to check `types/sprout.ts` to see if 'scorecard' is valid in Widget type.
+                data: scorecardData,
             } as any
         };
     }
@@ -118,7 +91,7 @@ function validateWidgetData(data: unknown): { valid: boolean; widget?: Omit<Widg
             chartType,
             title,
             data: chartData,
-        }
+        } as any
     };
 }
 
@@ -126,7 +99,7 @@ function validateWidgetData(data: unknown): { valid: boolean; widget?: Omit<Widg
  * WidgetListener - Securely listens for chart data from the DM Agent Extension
  */
 export function WidgetListener() {
-    const { addWidget } = useSproutStore();
+    // Removed legacy store usage
     const { addDynamicWidget, addGeneratedInsight } = useDashboard();
     const processedIds = useRef<Set<string>>(new Set());
 
@@ -153,13 +126,11 @@ export function WidgetListener() {
                 const uniqueId = `${widget.title}-${JSON.stringify(widget.data).slice(0, 50)}`;
                 if (processedIds.current.has(uniqueId)) return;
 
-                addWidget({ ...widget, id: `widget-${Date.now()}` });
-
-                // Sync to Dashboard Context (Data availability only, NO INSIGHT AUTO-ADD)
                 const widgetId = `widget-${Date.now()}`;
                 const widgetWithId = { ...widget, id: widgetId };
+
+                // Add to dynamic widgets (context)
                 addDynamicWidget(widgetWithId);
-                // REMOVED: addGeneratedInsight(widgetId, widget.title);
 
                 processedIds.current.add(uniqueId);
                 console.log('[WidgetListener] Added validated widget:', widget.title);
@@ -188,13 +159,7 @@ export function WidgetListener() {
                 if (processedIds.current.has(uniqueId)) return;
 
                 const widgetId = `widget-${Date.now()}`;
-
-                // Add to store
-                addWidget({ ...widget, id: widgetId });
-
-                // Sync to Dashboard Context
                 addDynamicWidget({ ...widget, id: widgetId });
-                // REMOVED: addGeneratedInsight(widgetId, widget.title);
 
                 processedIds.current.add(uniqueId);
                 console.log('[WidgetListener] Added widget via postMessage:', widget.title);
@@ -212,12 +177,7 @@ export function WidgetListener() {
             if (processedIds.current.has(uniqueId)) return;
 
             const widgetId = `widget-${Date.now()}`;
-
-            addWidget({ ...widget, id: widgetId });
-
-            // Sync to Dashboard Context for Insights
             addDynamicWidget({ ...widget, id: widgetId });
-            // REMOVED: addGeneratedInsight(widgetId, widget.title);
 
             processedIds.current.add(uniqueId);
         };
@@ -248,12 +208,12 @@ export function WidgetListener() {
                 const { valid, widget } = validateWidgetData(data);
                 if (valid && widget) {
                     const widgetId = `widget-${Date.now()}`;
-                    // Ensure widget data is in context
-                    addWidget({ ...widget, id: widgetId });
-                    addDynamicWidget({ ...widget, id: widgetId });
+                    const widgetWithId = { ...widget, id: widgetId };
 
-                    // THIS IS THE ONLY PLACE WE ADD INSIGHT
-                    addGeneratedInsight(widgetId, widget.title);
+                    addDynamicWidget(widgetWithId);
+                    // Persist to DB using API
+                    addGeneratedInsight(widgetId, widget.title, widgetWithId);
+
                     console.log('[WidgetListener] Manually added insight:', widget.title);
                 }
             }
@@ -273,7 +233,7 @@ export function WidgetListener() {
             window.removeEventListener('message', handleMessageEvent);
             window.removeEventListener('message', handleManualAddEvent);
         };
-    }, [addWidget, addDynamicWidget, addGeneratedInsight]);
+    }, [addDynamicWidget, addGeneratedInsight]);
 
     return null;
 }

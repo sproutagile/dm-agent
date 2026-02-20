@@ -1,11 +1,11 @@
 'use client';
 
-import { useSproutStore } from '@/store/useSproutStore';
+import { useDashboard } from '@/components/DashboardContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Activity, TrendingUp, AlertTriangle } from 'lucide-react';
 
 export function KPICards() {
-    const { kpiData } = useSproutStore();
+    const { kpiData } = useDashboard();
 
     const kpis = [
         {

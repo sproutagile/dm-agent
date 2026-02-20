@@ -1,15 +1,3 @@
-export interface Widget {
-    id: string;
-    type: 'chart' | 'table' | 'metric';
-    chartType?: 'bar' | 'line' | 'area' | 'pie';
-    title: string;
-    data: ChartDataPoint[];
-    colSpan?: number; // 1 (default), 2, or 3
-    refreshInterval?: number; // in milliseconds
-    webhookEndpoint?: string; // URL or identifier for data refresh
-    chartContext?: string; // Specific context/instruction for the AI (e.g. "Sprint 24 Tickets")
-}
-
 export interface ChartDataPoint {
     name: string;
     value: number;
@@ -17,11 +5,34 @@ export interface ChartDataPoint {
     [key: string]: string | number | undefined;
 }
 
+export interface Widget {
+    id: string;
+    type: 'chart' | 'scorecard' | 'text' | 'table' | 'metric';
+    chartType?: 'bar' | 'line' | 'area' | 'pie';
+    title: string;
+    data?: any; // Dynamic data for dynamic widgets
+    props?: any; // Legacy compatibility
+
+    // Additional fields from original file
+    colSpan?: number;
+    refreshInterval?: number;
+    webhookEndpoint?: string;
+    chartContext?: string;
+}
+
 export interface ChatMessage {
     id: string;
-    role: 'user' | 'assistant';
+    role: 'user' | 'assistant' | 'system';
     content: string;
-    timestamp: Date;
+    created_at?: string; // Changed from timestamp: Date to created_at: string
+}
+
+export interface GeneratedInsight {
+    id: string;
+    widgetId: string;
+    label: string;
+    generatedAt: string;
+    data?: any; // Dynamic widget config
 }
 
 export interface KPIData {
@@ -32,10 +43,10 @@ export interface KPIData {
 
 export interface WebhookResponse {
     message?: string;
-    type?: 'chart' | 'kpi' | 'text';
+    type?: 'chart' | 'kpi' | 'text' | 'scorecard';
     chartType?: 'bar' | 'line' | 'area' | 'pie';
     title?: string;
-    data?: ChartDataPoint[] | KPIData;
+    data?: ChartDataPoint[] | KPIData | any;
 }
 
 export interface WebhookRequest {

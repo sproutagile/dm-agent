@@ -1,11 +1,17 @@
 'use client';
 
-import { useSproutStore } from '@/store/useSproutStore';
+import { useDashboard } from '@/components/DashboardContext';
 import { DynamicChart } from './DynamicChart';
 import { LayoutGrid } from 'lucide-react';
+import { Widget } from '@/types/sprout';
 
 export function WidgetGrid() {
-    const { widgets, removeWidget } = useSproutStore();
+    const { generatedInsights, dynamicWidgets, removeGeneratedInsight } = useDashboard();
+
+    // Map insights to widgets
+    const widgets = generatedInsights
+        .map(insight => dynamicWidgets[insight.widgetId])
+        .filter(widget => !!widget) as Widget[];
 
     if (widgets.length === 0) {
         return (
@@ -26,9 +32,17 @@ export function WidgetGrid() {
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {widgets.map((widget) => (
-                <DynamicChart key={widget.id} widget={widget} onRemove={removeWidget} />
-            ))}
+            {widgets.map((widget) => {
+                // Find insight ID for this widget to allow removal
+                const insight = generatedInsights.find(i => i.widgetId === widget.id);
+                const handleRemove = () => {
+                    if (insight) removeGeneratedInsight(insight.id);
+                };
+
+                return (
+                    <DynamicChart key={widget.id} widget={widget} onRemove={handleRemove} />
+                );
+            })}
         </div>
     );
 }

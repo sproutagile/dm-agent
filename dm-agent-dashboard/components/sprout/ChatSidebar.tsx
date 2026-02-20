@@ -1,28 +1,25 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useSproutStore } from '@/store/useSproutStore';
 import { useDashboard } from '@/components/DashboardContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, Bot, User, Loader2, Sparkles } from 'lucide-react';
-import { ChatMessage, Widget, WebhookResponse, KPIData } from '@/types/sprout';
+import { ChatMessage, KPIData, WebhookResponse, Widget } from '@/types/sprout';
 
 export function ChatSidebar() {
     const [input, setInput] = useState('');
     const [sessionId, setSessionId] = useState<string>('');
+    const [isLoading, setIsLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
     const {
         chatMessages,
         addMessage,
-        addWidget,
         updateKPIs,
-        isLoading,
-        setLoading,
-    } = useSproutStore();
-    const { addDynamicWidget, addGeneratedInsight } = useDashboard();
+        addDynamicWidget,
+        addGeneratedInsight
+    } = useDashboard();
 
     // Generate or retrieve sessionId for multi-user isolation
     useEffect(() => {
@@ -46,16 +43,12 @@ export function ChatSidebar() {
     const handleSendMessage = async () => {
         if (!input.trim() || isLoading) return;
 
-        const userMessage: ChatMessage = {
-            id: `msg-${Date.now()}`,
-            role: 'user',
-            content: input.trim(),
-            timestamp: new Date(),
-        };
+        const content = input.trim();
 
-        addMessage(userMessage);
+        // Context handles optimistic update
+        await addMessage('user', content);
         setInput('');
-        setLoading(true);
+        setIsLoading(true);
 
         try {
             // Call the API route which proxies to the webhook
@@ -63,7 +56,7 @@ export function ChatSidebar() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    message: userMessage.content,
+                    message: content,
                     sessionId: sessionId,
                 }),
             });
@@ -73,24 +66,13 @@ export function ChatSidebar() {
             // Log the webhook response for debugging
             console.log('Webhook response:', data);
 
-            // Add assistant response from webhook
-            const assistantMessage: ChatMessage = {
-                id: `msg-${Date.now() + 1}`,
-                role: 'assistant',
-                content: data.message || (typeof data === 'string' ? data : JSON.stringify(data)),
-                timestamp: new Date(),
-            };
-            addMessage(assistantMessage);
+            // Add assistant response
+            const assistantContent = data.message || (typeof data === 'string' ? data : JSON.stringify(data));
+            await addMessage('assistant', assistantContent);
 
             // If webhook returned chart data, render it
             if (data.type === 'chart' && data.data && Array.isArray(data.data)) {
-                const generatingMessage: ChatMessage = {
-                    id: `msg-${Date.now() + 2}`,
-                    role: 'assistant',
-                    content: '✨ Generating chart from webhook data...',
-                    timestamp: new Date(),
-                };
-                addMessage(generatingMessage);
+                await addMessage('assistant', '✨ Generating chart from webhook data...');
 
                 setTimeout(() => {
                     const widget: Widget = {
@@ -100,11 +82,10 @@ export function ChatSidebar() {
                         title: data.title || 'Webhook Analytics',
                         data: data.data as { name: string; value: number }[],
                     };
-                    addWidget(widget);
 
                     // Sync to main Dashboard Insights
                     addDynamicWidget(widget);
-                    addGeneratedInsight(widget.id, widget.title);
+                    addGeneratedInsight(widget.id, widget.title, widget);
                 }, 500);
             }
 
@@ -114,15 +95,9 @@ export function ChatSidebar() {
             }
         } catch (error) {
             console.error('Webhook error:', error);
-            const errorMessage: ChatMessage = {
-                id: `msg-${Date.now() + 1}`,
-                role: 'assistant',
-                content: 'Failed to connect to webhook. Please check if the webhook URL is accessible.',
-                timestamp: new Date(),
-            };
-            addMessage(errorMessage);
+            await addMessage('assistant', 'Failed to connect to webhook. Please check if the webhook URL is accessible.');
         } finally {
-            setLoading(false);
+            setIsLoading(false);
         }
     };
 

@@ -1,15 +1,47 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, X, Edit2, Save, XCircle } from "lucide-react";
+import { useDashboard } from "@/components/DashboardContext";
 
 export default function ProfilePage() {
-    const [name, setName] = useState("Sunny Madridano");
+    const { user, updateUser } = useDashboard();
+    const [isEditing, setIsEditing] = useState(false);
+    const [formData, setFormData] = useState({
+        name: "",
+        jobRole: ""
+    });
+
     const [teams, setTeams] = useState([
         "Lireo",
         "Adamya",
         "Hathoria",
     ]);
+
+    // Sync state when user loads
+    useEffect(() => {
+        if (user) {
+            setFormData({
+                name: user.name || "",
+                jobRole: user.jobRole || "User"
+            });
+        }
+    }, [user]);
+
+    const handleSave = async () => {
+        await updateUser(formData);
+        setIsEditing(false);
+    };
+
+    const handleCancel = () => {
+        if (user) {
+            setFormData({
+                name: user.name || "",
+                jobRole: user.jobRole || "User"
+            });
+        }
+        setIsEditing(false);
+    };
 
     const handleAddTeam = () => {
         const teamName = prompt("Enter team name:");
@@ -27,11 +59,38 @@ export default function ProfilePage() {
             {/* Side-by-Side Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Left Column: Identity Card */}
-                <div className="bg-white rounded-lg shadow-sm p-8 h-full">
+                <div className="bg-white rounded-lg shadow-sm p-8 h-full relative">
+                    {/* Edit Button */}
+                    {!isEditing ? (
+                        <button
+                            onClick={() => setIsEditing(true)}
+                            className="absolute top-8 right-8 text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                            <Edit2 className="h-5 w-5" />
+                        </button>
+                    ) : (
+                        <div className="absolute top-8 right-8 flex gap-2">
+                            <button
+                                onClick={handleSave}
+                                className="text-green-600 hover:text-green-700 transition-colors"
+                            >
+                                <Save className="h-5 w-5" />
+                            </button>
+                            <button
+                                onClick={handleCancel}
+                                className="text-red-500 hover:text-red-600 transition-colors"
+                            >
+                                <XCircle className="h-5 w-5" />
+                            </button>
+                        </div>
+                    )}
+
                     <div className="flex items-start gap-6">
                         {/* Avatar */}
                         <div className="h-24 w-24 rounded-full bg-[#1B5E20] flex items-center justify-center shrink-0">
-                            <span className="text-3xl font-bold text-white">SM</span>
+                            <span className="text-3xl font-bold text-white">
+                                {user?.name ? user.name.substring(0, 2).toUpperCase() : 'U'}
+                            </span>
                         </div>
 
                         {/* Details */}
@@ -41,19 +100,36 @@ export default function ProfilePage() {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Name
                                 </label>
-                                <input
-                                    type="text"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2E7D32] focus:border-transparent text-lg font-semibold"
-                                />
+                                {isEditing ? (
+                                    <input
+                                        type="text"
+                                        value={formData.name}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B5E20] bg-white text-lg font-semibold"
+                                    />
+                                ) : (
+                                    <p className="text-lg font-semibold text-gray-900">{user?.name || 'N/A'}</p>
+                                )}
                             </div>
 
-                            {/* Role Badge */}
+                            {/* Job Role */}
                             <div>
-                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-[#2E7D32] text-white">
-                                    Delivery Manager
-                                </span>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Job Role
+                                </label>
+                                {isEditing ? (
+                                    <input
+                                        type="text"
+                                        value={formData.jobRole}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, jobRole: e.target.value }))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B5E20] bg-white text-sm"
+                                        placeholder="e.g. Product Manager"
+                                    />
+                                ) : (
+                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-[#2E7D32] text-white">
+                                        {user?.jobRole || 'User'}
+                                    </span>
+                                )}
                             </div>
 
                             {/* Email */}
@@ -61,7 +137,23 @@ export default function ProfilePage() {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Email
                                 </label>
-                                <p className="text-gray-600">sunny@sprout.ph</p>
+                                <p className="text-gray-600">{user?.email || 'N/A'}</p>
+                            </div>
+
+                            {/* System Role */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    System Role
+                                </label>
+                                <p className="text-gray-600 font-mono text-sm">{user?.systemRole || 'USER'}</p>
+                            </div>
+
+                            {/* User ID */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    User ID
+                                </label>
+                                <p className="text-gray-500 font-mono text-xs">{user?.id || '...'}</p>
                             </div>
                         </div>
                     </div>
