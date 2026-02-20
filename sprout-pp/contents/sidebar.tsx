@@ -19,7 +19,7 @@ export const getStyle: PlasmoGetStyle = () => {
 }
 
 function SidebarContent() {
-    const [isOpen, setIsOpen] = useState(false)
+    const [isOpen, setIsOpen] = useState(true)
     const isMounted = useRef(false)
 
     useEffect(() => {
