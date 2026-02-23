@@ -33,7 +33,7 @@ export default function RegisterPage() {
             }
 
             if (data.user.status === 'APPROVED') {
-                router.push('/dashboard');
+                router.push('/insights');
             } else {
                 router.push('/login?pending=true');
             }
@@ -43,61 +43,129 @@ export default function RegisterPage() {
     };
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-gray-50">
-            <div className="w-full max-w-md space-y-8 p-8 bg-white rounded-xl shadow-lg">
-                <div className="text-center">
-                    <h2 className="text-3xl font-bold tracking-tight text-gray-900">Create account</h2>
-                    <p className="mt-2 text-sm text-gray-600">
-                        Already have an account? <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">Sign in</Link>
-                    </p>
-                </div>
-                <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-                    <div className="space-y-4 rounded-md shadow-sm">
-                        <input
-                            type="text"
-                            required
-                            className="block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 px-3"
-                            placeholder="Full Name"
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        />
-                        <input
-                            type="text"
-                            required
-                            className="block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 px-3"
-                            placeholder="Job Role (e.g. Developer)"
-                            value={formData.jobRole}
-                            onChange={(e) => setFormData({ ...formData, jobRole: e.target.value })}
-                        />
-                        <input
-                            type="email"
-                            required
-                            className="block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 px-3"
-                            placeholder="Email address"
-                            value={formData.email}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        />
-                        <input
-                            type="password"
-                            required
-                            className="block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 px-3"
-                            placeholder="Password"
-                            value={formData.password}
-                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        />
-                    </div>
-
-                    {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-
+        <div className="flex min-h-screen bg-white">
+            {/* Left Side: Form */}
+            <div className="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24 w-full lg:w-1/2">
+                <div className="mx-auto w-full max-w-sm lg:w-96">
                     <div>
-                        <button
-                            type="submit"
-                            className="group relative flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-                        >
-                            Sign up
-                        </button>
+                        <div className="h-12 w-12 rounded-xl bg-[#22C558] flex items-center justify-center mb-6">
+                            {/* SVG Sprout icon */}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 20h10" /><path d="M10 20c5.5-2.5.8-6.4 3-10" /><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z" /><path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z" /></svg>
+                        </div>
+                        <h2 className="mt-8 text-3xl font-bold tracking-tight text-gray-900">
+                            Create account
+                        </h2>
+                        <p className="mt-2 text-sm text-gray-600">
+                            Already have an account?{' '}
+                            <Link href="/login" className="font-semibold text-[#1B5E20] hover:text-[#14532B] transition-colors">
+                                Sign in
+                            </Link>
+                        </p>
                     </div>
-                </form>
+
+                    <div className="mt-10">
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <div>
+                                <label htmlFor="name" className="block text-sm font-medium leading-6 text-gray-900">
+                                    Full Name
+                                </label>
+                                <div className="mt-2">
+                                    <input
+                                        id="name"
+                                        type="text"
+                                        required
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        className="block w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-[#1B5E20] sm:text-sm sm:leading-6"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label htmlFor="jobRole" className="block text-sm font-medium leading-6 text-gray-900">
+                                    Job Role (e.g. Developer)
+                                </label>
+                                <div className="mt-2">
+                                    <input
+                                        id="jobRole"
+                                        type="text"
+                                        required
+                                        value={formData.jobRole}
+                                        onChange={(e) => setFormData({ ...formData, jobRole: e.target.value })}
+                                        className="block w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-[#1B5E20] sm:text-sm sm:leading-6"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label htmlFor="email" className="block text-sm font-medium leading-6 text-gray-900">
+                                    Email address
+                                </label>
+                                <div className="mt-2">
+                                    <input
+                                        id="email"
+                                        type="email"
+                                        required
+                                        value={formData.email}
+                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                        className="block w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-[#1B5E20] sm:text-sm sm:leading-6"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label htmlFor="password" className="block text-sm font-medium leading-6 text-gray-900">
+                                    Password
+                                </label>
+                                <div className="mt-2">
+                                    <input
+                                        id="password"
+                                        type="password"
+                                        required
+                                        value={formData.password}
+                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                        className="block w-full rounded-md border-0 py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-[#1B5E20] sm:text-sm sm:leading-6"
+                                    />
+                                </div>
+                            </div>
+
+                            {error && (
+                                <div className="rounded-md bg-red-50 p-4">
+                                    <div className="flex">
+                                        <div className="ml-3">
+                                            <h3 className="text-sm font-medium text-red-800">{error}</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div>
+                                <button
+                                    type="submit"
+                                    className="flex w-full justify-center rounded-md bg-[#1B5E20] px-3 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#14532B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1B5E20] transition-colors"
+                                >
+                                    Sign up
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            {/* Right Side: Visual/Brand */}
+            <div className="relative hidden w-0 flex-1 lg:block bg-[#1B5E20]">
+                <div className="absolute inset-0 h-full w-full object-cover rounded-l-3xl shadow-[-10px_0_20px_rgba(0,0,0,0.1)] bg-gradient-to-tr from-[#14532B] via-[#1B5E20] to-[#22C558] overflow-hidden">
+                    {/* Decorative abstract elements */}
+                    <div className="absolute top-1/3 left-1/3 w-96 h-96 bg-white opacity-[0.03] rounded-full blur-3xl mix-blend-overlay animate-pulse"></div>
+                    <div className="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-white opacity-[0.05] rounded-full blur-3xl mix-blend-overlay"></div>
+
+                    <div className="absolute bottom-0 left-0 p-16 w-full text-white">
+                        <h2 className="text-4xl font-bold tracking-tight mb-4">Grow with Data.</h2>
+                        <p className="text-lg text-white/80 max-w-xl">
+                            Join your team on Sprout Dashboard. Gain real-time visibility into development cycles and accelerate delivery pipelines.
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
     );

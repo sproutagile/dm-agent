@@ -133,6 +133,52 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
             }
         }
         loadData();
+
+        // Polling mechanism to receive newly added HTTP POST insights
+        const pollInterval = setInterval(async () => {
+            try {
+                // Only poll if we have successfully loaded a user profile initially 
+                // Using the 'user' closure variable directly won't update in setInterval, but the API will just return 401 if unauth'd anyway
+                const insightRes = await fetch("/api/insights");
+                if (!insightRes.ok) return; // 401 naturally handles the "unauthenticated" skip
+                if (insightRes.ok) {
+                    const insights: any[] = await insightRes.json();
+
+                    // Update insights list if there's a difference
+                    setGeneratedInsights(prev => {
+                        const currentIds = new Set(prev.map(p => p.id));
+                        const newInsights = insights.filter(i => !currentIds.has(i.id));
+
+                        if (newInsights.length > 0) {
+                            const loadedNewInsights = newInsights.map(i => ({
+                                id: i.id,
+                                widgetId: i.id,
+                                label: i.label || i.title || 'Generated Insight',
+                                generatedAt: i.generatedAt || i.created_at || new Date().toISOString()
+                            }));
+
+                            // Also update the dynamicWidgets map for those new ones
+                            setDynamicWidgets(prevWidgets => {
+                                const nextWidgets = { ...prevWidgets };
+                                newInsights.forEach(i => {
+                                    if (i.data) {
+                                        nextWidgets[i.id] = { ...i.data, id: i.id };
+                                    }
+                                });
+                                return nextWidgets;
+                            });
+
+                            return [...loadedNewInsights, ...prev];
+                        }
+                        return prev;
+                    });
+                }
+            } catch (err) {
+                // silently fail polling
+            }
+        }, 5000);
+
+        return () => clearInterval(pollInterval);
     }, []);
 
     const addDashboard = async (name: string, icon: string) => {

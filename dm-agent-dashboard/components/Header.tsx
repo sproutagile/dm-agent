@@ -15,7 +15,7 @@ export function Header() {
     const pathname = usePathname();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
-    const { getDashboard, user, logout } = useDashboard();
+    const { getDashboard, user, logout, loading } = useDashboard();
 
     // Handle dynamic dashboard titles
     let pageTitle = routeTitles[pathname] || "Dashboard";

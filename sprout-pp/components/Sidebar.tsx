@@ -43,6 +43,31 @@ export function Sidebar({ onClose }: SidebarProps) {
         chrome.storage.local.set({ 'sprout_chat_messages': messages });
     }, [messages, isHydrated]);
 
+    // Listen for storage changes from other tabs to sync chat
+    useEffect(() => {
+        if (!chrome.storage || !chrome.storage.onChanged) return;
+
+        const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
+            if (areaName === 'local' && changes.sprout_chat_messages) {
+                const newMessages = changes.sprout_chat_messages.newValue;
+                if (Array.isArray(newMessages)) {
+                    // Simple equality check to avoid infinite loops across tabs
+                    setMessages(prev => {
+                        if (JSON.stringify(prev) !== JSON.stringify(newMessages)) {
+                            return newMessages;
+                        }
+                        return prev;
+                    });
+                }
+            }
+        };
+
+        chrome.storage.onChanged.addListener(handleStorageChange);
+        return () => {
+            chrome.storage.onChanged.removeListener(handleStorageChange);
+        };
+    }, []);
+
     const handleSendMessage = useCallback(async (content: string) => {
         if (!content.trim()) return
 

@@ -126,7 +126,13 @@ export default function InsightsPage() {
                                             {insight.label}
                                         </td>
                                         <td className="px-6 py-4 text-gray-500">
-                                            {insight.generatedAt}
+                                            {new Date(insight.generatedAt).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })}
                                         </td>
                                         <td className="px-6 py-4">
                                             {isAdded ? (

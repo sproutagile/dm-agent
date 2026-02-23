@@ -185,53 +185,15 @@ export function WidgetListener() {
         // Initialize processing
         processPendingWidget();
 
-        const handleManualAddEvent = (event: StorageEvent | MessageEvent) => {
-            let data: any;
-
-            if (event instanceof StorageEvent) {
-                const MANUAL_KEY = 'sprout_add_insight_event';
-                if (event.key === MANUAL_KEY && event.newValue) {
-                    try {
-                        const parsed = JSON.parse(event.newValue);
-                        data = parsed.widget;
-                        // Clear to prevent re-trigger
-                        localStorage.removeItem(MANUAL_KEY);
-                    } catch (e) { console.error(e) }
-                }
-            } else if (event instanceof MessageEvent) {
-                if (event.data?.type === 'SPROUT_ADD_INSIGHT') {
-                    data = event.data.payload;
-                }
-            }
-
-            if (data) {
-                const { valid, widget } = validateWidgetData(data);
-                if (valid && widget) {
-                    const widgetId = `widget-${Date.now()}`;
-                    const widgetWithId = { ...widget, id: widgetId };
-
-                    addDynamicWidget(widgetWithId);
-                    // Persist to DB using API
-                    addGeneratedInsight(widgetId, widget.title, widgetWithId);
-
-                    console.log('[WidgetListener] Manually added insight:', widget.title);
-                }
-            }
-        };
-
-        // Listeners
+        // Listeners for programmatic AI chart generations
         window.addEventListener('storage', handleStorageChange);
-        window.addEventListener('storage', handleManualAddEvent);
         window.addEventListener('sprout-widget-data', handleCustomEvent as EventListener);
         window.addEventListener('message', handleMessageEvent);
-        window.addEventListener('message', handleManualAddEvent);
 
         return () => {
             window.removeEventListener('storage', handleStorageChange);
-            window.removeEventListener('storage', handleManualAddEvent);
             window.removeEventListener('sprout-widget-data', handleCustomEvent as EventListener);
             window.removeEventListener('message', handleMessageEvent);
-            window.removeEventListener('message', handleManualAddEvent);
         };
     }, [addDynamicWidget, addGeneratedInsight]);
 

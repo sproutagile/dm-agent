@@ -39,36 +39,37 @@ interface MessageItemProps extends VariantProps<typeof messageVariants> {
 export function MessageItem({ role, content, isStreaming = false, data }: MessageItemProps) {
     const [isAdded, setIsAdded] = useState(false)
 
-    const handleAddToInsight = () => {
+    const handleAddToInsight = async () => {
         if (!data) return
 
         setIsAdded(true)
-        console.log("Dispatching SPROUT_ADD_INSIGHT", data)
+        console.log("Adding insight via HTTP POST", data)
 
-        // Method 1: LocalStorage event (cross-context)
         try {
-            localStorage.setItem('sprout_add_insight_event', JSON.stringify({
-                timestamp: Date.now(),
-                widget: data
-            }));
-            // Trigger storage event manually for same-window listeners
-            window.dispatchEvent(new StorageEvent('storage', {
-                key: 'sprout_add_insight_event',
-                newValue: JSON.stringify({ timestamp: Date.now(), widget: data }),
-                storageArea: localStorage
-            }));
-        } catch (e) {
-            console.error("Failed to dispatch via localStorage", e)
-        }
+            // Deliver insight directly to the backend
+            const response = await fetch('http://localhost:3000/api/insights', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    label: data.title || 'Generated Insight',
+                    data: data
+                })
+            });
 
-        // Method 2: PostMessage (iframe/window)
-        try {
-            window.postMessage({ type: 'SPROUT_ADD_INSIGHT', payload: data }, '*');
-            if (window.top && window.top !== window) {
-                window.top.postMessage({ type: 'SPROUT_ADD_INSIGHT', payload: data }, '*');
+            if (!response.ok) {
+                console.error("Failed to add insight", await response.text());
+                setIsAdded(false);
+                return;
             }
+
+            console.log("Insight added successfully!");
         } catch (e) {
-            console.error("Failed to postMessage", e);
+            console.error("Network error while adding insight", e);
+            setIsAdded(false);
+            return;
         }
 
         setTimeout(() => setIsAdded(false), 2000)
