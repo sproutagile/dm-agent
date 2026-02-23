@@ -38,7 +38,7 @@
   "manifest": {
     "host_permissions": [
       "https://*/*",
-      "http://localhost:3000/*"
+      "https://agile.sprout.ph/*"
     ],
     "permissions": [
       "activeTab",

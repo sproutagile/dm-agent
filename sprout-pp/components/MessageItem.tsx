@@ -47,7 +47,7 @@ export function MessageItem({ role, content, isStreaming = false, data }: Messag
 
         try {
             // Deliver insight directly to the backend
-            const response = await fetch('http://localhost:3000/api/insights', {
+            const response = await fetch('https://agile.sprout.ph/api/insights', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

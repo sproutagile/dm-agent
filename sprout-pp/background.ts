@@ -1,7 +1,7 @@
 // Background service worker for handling extension icon clicks and API requests
 
 const DEFAULT_WEBHOOK_URL = "http://agile.sprout.ph/automations/webhook/049a56fd-7cf2-46b6-abe9-b24d41ecc092/chat"
-const DASHBOARD_API_URL = "http://localhost:3000/api/chat"
+const DASHBOARD_API_URL = "https://agile.sprout.ph/api/chat"
 const ENABLE_DASHBOARD_SYNC = false // Disabled for standalone mode
 
 // Initialize configuration on install
@@ -118,7 +118,7 @@ async function callN8nWebhook(webhookUrl: string, text: string, sessionId: strin
         console.error('Webhook failed:', error)
         return {
             ok: false,
-            error: error.message || 'Failed to connect to webhook'
+            error: (error as Error).message || 'Failed to connect to webhook'
         }
     }
 }
