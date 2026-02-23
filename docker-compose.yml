@@ -1,0 +1,17 @@
+services:
+  dashboard:
+    build: 
+      context: ./dm-agent-dashboard
+      dockerfile: Dockerfile
+    image: sprout-dashboard
+    container_name: sprout-dashboard
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./dm-agent-dashboard/data:/app/data
+      - ./dm-agent-dashboard/public:/app/public
+    environment:
+      - NODE_ENV=production
+      - JWT_SECRET=change-this-secret-in-prod-please
+    init: true
