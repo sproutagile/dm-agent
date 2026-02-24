@@ -36,9 +36,9 @@ export function TeamEfficiencyChart() {
                         }}
                     />
                     <Legend />
-                    <Bar dataKey="ticketsDone" stackId="a" fill="#2E7D32" name="Tickets Done" />
-                    <Bar dataKey="plannedTickets" stackId="a" fill="#2D3A8C" name="Planned Tickets" />
-                    <Bar dataKey="addedTickets" stackId="a" fill="#F5A623" name="Added Tickets" />
+                    <Bar isAnimationActive={false} dataKey="ticketsDone" stackId="a" fill="#2E7D32" name="Tickets Done" />
+                    <Bar isAnimationActive={false} dataKey="plannedTickets" stackId="a" fill="#2D3A8C" name="Planned Tickets" />
+                    <Bar isAnimationActive={false} dataKey="addedTickets" stackId="a" fill="#F5A623" name="Added Tickets" />
                 </BarChart>
             </ResponsiveContainer>
         </ChartContainer>

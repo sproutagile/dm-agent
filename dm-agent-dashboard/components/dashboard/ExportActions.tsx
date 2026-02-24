@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import { Download, Share2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import * as htmlToImage from 'html-to-image';
+import jsPDF from "jspdf";
 
 
 interface ExportActionsProps {
@@ -21,43 +23,43 @@ export function ExportActions({ targetId, dashboardName = "Dashboard" }: ExportA
         setIsExporting(true);
 
         try {
-            // Collect styles
-            let css = "";
-            const styleSheets = Array.from(document.styleSheets);
+            // Because html-to-image uses an SVG foreignObject engine, we do not need to 
+            // hackily mutate the live DOM and cause the user's screen to jump and animate.
+            // We can just rely on the layout exactly as it is currently rendered.
 
-            for (const sheet of styleSheets) {
-                try {
-                    // Check if headers are accessible (CORS)
-                    if (sheet.href && !sheet.href.startsWith(window.location.origin)) {
-                        continue;
-                    }
-                    const rules = Array.from(sheet.cssRules || []);
-                    css += rules.map(rule => rule.cssText).join("\n");
-                } catch (e) {
-                    console.warn("Could not access stylesheet:", sheet.href);
+            // Capture the canvas natively using html-to-image
+            const dataUrl = await htmlToImage.toPng(element, {
+                quality: 1.0,
+                pixelRatio: 2,
+                backgroundColor: "#f9fafb", // ensure solid background
+                style: {
+                    margin: '0',
                 }
-            }
-
-            // Get HTML
-            const html = element.outerHTML;
-
-            const response = await fetch("/api/generate-pdf", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ html, css }),
             });
 
-            if (!response.ok) throw new Error("PDF generation failed");
+            // Calculate PDF dimensions (A4 Landscape)
+            const pdf = new jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: 'a4'
+            });
 
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `${dashboardName.replace(/\s+/g, "_")}_Export.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(url);
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+
+            // Add margins
+            const margin = 10;
+            const contentWidth = pdfWidth - (margin * 2);
+
+            // Calculate image height to maintain aspect ratio
+            const imgProps = pdf.getImageProperties(dataUrl);
+            const imgHeight = (imgProps.height * contentWidth) / imgProps.width;
+
+            // Add image to PDF
+            pdf.addImage(dataUrl, 'PNG', margin, margin, contentWidth, Math.min(imgHeight, pdfHeight - (margin * 2)));
+
+            // Save the PDF
+            pdf.save(`${dashboardName.replace(/\s+/g, "_")}_Export.pdf`);
 
         } catch (error) {
             console.error("Export failed:", error);
@@ -79,19 +81,7 @@ export function ExportActions({ targetId, dashboardName = "Dashboard" }: ExportA
 
     return (
         <div className="flex items-center gap-2">
-            <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 print:hidden"
-                onClick={handleShare}
-            >
-                {isCopied ? (
-                    <Check className="h-4 w-4 text-green-500" />
-                ) : (
-                    <Share2 className="h-4 w-4" />
-                )}
-                {isCopied ? "Copied Link" : "Share"}
-            </Button>
+
 
             <Button
                 variant="default"

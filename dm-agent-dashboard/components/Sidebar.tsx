@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useDashboard } from "@/components/DashboardContext";
 import * as LucideIcons from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const CURATED_ICONS = [
     "LayoutDashboard", "TrendingUp", "Zap", "Target", "Users",
@@ -35,6 +36,9 @@ export function Sidebar() {
 
     // Dropdown state
     const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+
+    // Delete confirmation state
+    const [dashboardToDelete, setDashboardToDelete] = useState<string | null>(null);
 
     const handleCreateStart = () => {
         setIsCreating(true);
@@ -88,12 +92,10 @@ export function Sidebar() {
     };
 
     const handleDelete = (id: string) => {
-        if (confirm("Are you sure you want to delete this dashboard?")) {
-            deleteDashboard(id);
-            setOpenDropdownId(null);
-            if (pathname === `/dashboard/${id}`) {
-                router.push("/insights");
-            }
+        deleteDashboard(id);
+        setOpenDropdownId(null);
+        if (pathname === `/dashboard/${id}`) {
+            router.push("/insights");
         }
     };
 
@@ -104,8 +106,6 @@ export function Sidebar() {
 
     return (
         <div
-            onMouseEnter={() => setIsExpanded(true)}
-            onMouseLeave={() => setIsExpanded(false)}
             className={`fixed left-0 top-0 h-screen bg-[#14532B] flex flex-col z-50 transition-all duration-300 ease-in-out ${isExpanded ? "w-64" : "w-20"
                 }`}
         >
@@ -297,7 +297,7 @@ export function Sidebar() {
                                                 Rename
                                             </button>
                                             <button
-                                                onClick={() => handleDelete(dashboard.id)}
+                                                onClick={() => setDashboardToDelete(dashboard.id)}
                                                 className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                                             >
                                                 <Trash2 className="h-4 w-4" />
@@ -404,6 +404,31 @@ export function Sidebar() {
                     </button>
                 )}
             </nav>
+
+            {/* Toggle Sidebar Button */}
+            <div className={`p-4 border-t border-white/20 flex ${isExpanded ? "justify-end" : "justify-center"}`}>
+                <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                    title={isExpanded ? "Collapse Sidebar" : "Expand Sidebar"}
+                >
+                    {isExpanded ? <LucideIcons.ChevronLeft className="h-5 w-5" /> : <LucideIcons.ChevronRight className="h-5 w-5" />}
+                </button>
+            </div>
+
+            <ConfirmDialog
+                isOpen={!!dashboardToDelete}
+                onOpenChange={(open) => !open && setDashboardToDelete(null)}
+                title="Delete Dashboard"
+                description="Are you sure you want to delete this dashboard? All widgets inside it will be removed."
+                confirmText="Delete Dashboard"
+                onConfirm={() => {
+                    if (dashboardToDelete) {
+                        handleDelete(dashboardToDelete);
+                        setDashboardToDelete(null);
+                    }
+                }}
+            />
         </div>
     );
 }

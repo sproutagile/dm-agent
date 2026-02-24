@@ -22,6 +22,7 @@ import {
     Legend,
 } from 'recharts';
 import { X, BarChart3, Pencil, Save, Plus, Trash2, RefreshCw } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 
 interface DynamicChartProps {
@@ -41,6 +42,9 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
     const [editRefreshInterval, setEditRefreshInterval] = useState(widget.refreshInterval || 0);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const [rowToDelete, setRowToDelete] = useState<number | null>(null);
+    const [isWidgetDeleteConfirmOpen, setIsWidgetDeleteConfirmOpen] = useState(false);
 
     // State for user-friendly data editing
     const [dataRows, setDataRows] = useState<Array<{ name: string; value: string | number }>>(
@@ -217,6 +221,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                             />
                             <Legend />
                             <Line
+                                isAnimationActive={false}
                                 type="monotone"
                                 dataKey="value"
                                 stroke={mainColor}
@@ -245,6 +250,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                             />
                             <Legend />
                             <Area
+                                isAnimationActive={false}
                                 type="monotone"
                                 dataKey="value"
                                 stroke={mainColor}
@@ -266,6 +272,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                     <ResponsiveContainer width="100%" height={280}>
                         <PieChart>
                             <Pie
+                                isAnimationActive={false}
                                 data={chartData}
                                 cx="50%"
                                 cy="50%"
@@ -312,6 +319,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                             />
                             <Legend />
                             <Bar
+                                isAnimationActive={false}
                                 dataKey="value"
                                 radius={[4, 4, 0, 0]}
                                 maxBarSize={50}
@@ -388,7 +396,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                                         onChange={(e) => handleDataChange(index, 'value', e.target.value)}
                                     />
                                     <button
-                                        onClick={() => handleRemoveRow(index)}
+                                        onClick={() => setRowToDelete(index)}
                                         className="p-2 text-red-500 hover:bg-red-50 rounded-md"
                                         title="Remove"
                                     >
@@ -462,6 +470,20 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                         </button>
                     </div>
                 </div>
+
+                <ConfirmDialog
+                    isOpen={rowToDelete !== null}
+                    onOpenChange={(open) => !open && setRowToDelete(null)}
+                    title="Remove Data Point"
+                    description="Are you sure you want to remove this data point?"
+                    confirmText="Remove"
+                    onConfirm={() => {
+                        if (rowToDelete !== null) {
+                            handleRemoveRow(rowToDelete);
+                            setRowToDelete(null);
+                        }
+                    }}
+                />
             </Card>
         );
     }
@@ -495,7 +517,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                     </button>
                     {onRemove && (
                         <button
-                            onClick={() => onRemove(widget.id)}
+                            onClick={() => setIsWidgetDeleteConfirmOpen(true)}
                             className="p-1 rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-red-600"
                             title="Remove Widget"
                         >
@@ -512,6 +534,20 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                 )}
                 {renderChart()}
             </CardContent>
+
+            <ConfirmDialog
+                isOpen={isWidgetDeleteConfirmOpen}
+                onOpenChange={setIsWidgetDeleteConfirmOpen}
+                title="Remove Widget"
+                description="Are you sure you want to remove this widget?"
+                confirmText="Remove"
+                onConfirm={() => {
+                    if (onRemove) {
+                        onRemove(widget.id);
+                        setIsWidgetDeleteConfirmOpen(false);
+                    }
+                }}
+            />
         </Card>
     );
 }

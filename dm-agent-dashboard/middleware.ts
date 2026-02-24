@@ -5,7 +5,7 @@ import { verifyTokenEdge } from './lib/auth-edge';
 // Paths that do NOT require authentication
 const PUBLIC_PATHS = ['/login', '/register', '/share', '/api/share'];
 
-export async function proxy(req: NextRequest) {
+export async function middleware(req: NextRequest) {
     const path = req.nextUrl.pathname;
 
     // Check if path is public

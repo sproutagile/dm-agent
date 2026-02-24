@@ -14,5 +14,19 @@ export async function GET(req: Request, { params }: { params: Promise<{ token: s
         return NextResponse.json({ error: 'Dashboard not found' }, { status: 404 });
     }
 
-    return NextResponse.json(dashboard);
+    // Parse the JSON array of graph IDs
+    const graphIds = dashboard.graphs ? JSON.parse(dashboard.graphs) : [];
+    let insights: any[] = [];
+
+    // If there are graphs on the dashboard, fetch their datasets
+    if (graphIds.length > 0) {
+        const placeholders = graphIds.map(() => '?').join(',');
+        insights = await db.all(`SELECT * FROM insights WHERE id IN (${placeholders})`, ...graphIds);
+    }
+
+    // Attach the insights dataset so the public view can render the charts
+    return NextResponse.json({
+        ...dashboard,
+        insights
+    });
 }

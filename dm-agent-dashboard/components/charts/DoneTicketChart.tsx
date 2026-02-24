@@ -36,9 +36,9 @@ export function DoneTicketChart() {
                         }}
                     />
                     <Legend />
-                    <Bar dataKey="ticketsDone" stackId="a" fill="#2E7D32" name="Tickets Done" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="plannedTickets" stackId="a" fill="#2D3A8C" name="Planned Tickets" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="addedTickets" stackId="a" fill="#F5A623" name="Added Tickets" radius={[4, 4, 0, 0]} />
+                    <Bar isAnimationActive={false} dataKey="ticketsDone" stackId="a" fill="#2E7D32" name="Tickets Done" radius={[0, 0, 0, 0]} />
+                    <Bar isAnimationActive={false} dataKey="plannedTickets" stackId="a" fill="#2D3A8C" name="Planned Tickets" radius={[0, 0, 0, 0]} />
+                    <Bar isAnimationActive={false} dataKey="addedTickets" stackId="a" fill="#F5A623" name="Added Tickets" radius={[4, 4, 0, 0]} />
                 </BarChart>
             </ResponsiveContainer>
         </ChartContainer>

@@ -2,8 +2,10 @@
 
 import { useParams } from "next/navigation";
 import { useDashboard } from "@/components/DashboardContext";
+import { useState } from "react";
 import { Trash2, Globe } from "lucide-react";
 import { ShareDashboardButton } from "@/components/dashboard/ShareDashboardButton";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 // Widget Components
 import { ScorecardWidget } from "@/components/widgets/ScorecardWidget";
@@ -28,6 +30,7 @@ const WIDGET_COMPONENTS: Record<string, React.FC<any>> = {
 export default function DashboardPage() {
     const params = useParams();
     const dashboardId = params.id as string;
+    const [widgetToRemove, setWidgetToRemove] = useState<string | null>(null);
     const { getDashboard, removeGraphFromDashboard, dynamicWidgets } = useDashboard();
     const dashboard = getDashboard(dashboardId);
 
@@ -143,7 +146,7 @@ export default function DashboardPage() {
                                 We can use data-html2canvas-ignore attribute to exclude it from PDF. 
                             */}
                             <button
-                                onClick={() => handleRemove(graphId)}
+                                onClick={() => setWidgetToRemove(graphId)}
                                 data-html2canvas-ignore
                                 className="absolute top-2 right-2 z-20 p-1.5 bg-white rounded-lg shadow-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
                             >
@@ -156,6 +159,20 @@ export default function DashboardPage() {
                     );
                 })}
             </div>
+
+            <ConfirmDialog
+                isOpen={!!widgetToRemove}
+                onOpenChange={(open) => !open && setWidgetToRemove(null)}
+                title="Remove Widget"
+                description="Are you sure you want to remove this widget from the dashboard?"
+                confirmText="Remove"
+                onConfirm={() => {
+                    if (widgetToRemove) {
+                        handleRemove(widgetToRemove);
+                        setWidgetToRemove(null);
+                    }
+                }}
+            />
         </div>
     );
 }

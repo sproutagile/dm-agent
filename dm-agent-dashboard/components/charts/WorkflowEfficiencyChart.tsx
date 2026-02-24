@@ -36,8 +36,8 @@ export function WorkflowEfficiencyChart() {
                         }}
                     />
                     <Legend />
-                    <Bar dataKey="cycleTime" fill="#2E7D32" name="Cycle Time (days)" />
-                    <Bar dataKey="leadTime" fill="#2D3A8C" name="Lead Time (days)" />
+                    <Bar isAnimationActive={false} dataKey="cycleTime" fill="#2E7D32" name="Cycle Time (days)" />
+                    <Bar isAnimationActive={false} dataKey="leadTime" fill="#2D3A8C" name="Lead Time (days)" />
                 </BarChart>
             </ResponsiveContainer>
         </ChartContainer>

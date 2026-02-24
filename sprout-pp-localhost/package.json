@@ -1,0 +1,49 @@
+{
+  "name": "sprout-ai",
+  "displayName": "Sprout AI",
+  "version": "0.0.2",
+  "description": "AI-powered sidebar assistant",
+  "author": "Sprout Team",
+  "scripts": {
+    "dev": "plasmo dev",
+    "build": "plasmo build",
+    "package": "plasmo package"
+  },
+  "dependencies": {
+    "@types/uuid": "^10.0.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.460.0",
+    "plasmo": "^0.90.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.15.0",
+    "tailwind-merge": "^2.5.5",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.280",
+    "@types/d3-array": "^3.2.1",
+    "@types/d3-scale": "^4.0.8",
+    "@types/d3-shape": "^3.1.6",
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "autoprefixer": "^10.4.20",
+    "crypto-browserify": "^3.12.1",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.2"
+  },
+  "manifest": {
+    "host_permissions": [
+      "https://*/*",
+      "https://agile.sprout.ph/*"
+    ],
+    "permissions": [
+      "activeTab",
+      "storage"
+    ],
+    "action": {}
+  }
+}

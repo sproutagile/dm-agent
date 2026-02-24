@@ -37,7 +37,7 @@ export function ReleaseBurnupChart() {
                             }}
                         />
                         <Legend />
-                        <Line
+                        <Line isAnimationActive={false}
                             type="monotone"
                             dataKey="projected"
                             stroke="#2D3A8C"
@@ -46,7 +46,7 @@ export function ReleaseBurnupChart() {
                             name="Projected"
                             dot={{ fill: "#2D3A8C", r: 4 }}
                         />
-                        <Line
+                        <Line isAnimationActive={false}
                             type="monotone"
                             dataKey="actual"
                             stroke="#2E7D32"

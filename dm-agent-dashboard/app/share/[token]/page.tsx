@@ -61,13 +61,20 @@ export default function PublicSharePage() {
     // We might have layout data but we will ignore it for now to match main dashboard CSS grid approach,
     // or we can use it if we want strict positioning. But for simplicity and consistency with main dashboard:
 
-    // Helper to get widget definition - similar to main dashboard logic
+    // Helper to get widget definition
     const getWidgetContent = (graphId: string) => {
-        // Since we don't have the full dynamicWidgets state from context here, 
-        // we assume for now this public view renders static widgets or we'd need to fetch dynamic widget definitions too.
-        // For this implementation, we will check WIDGET_LIBRARY.
-        // Note: Real implementation would need to store/fetch dynamic widget definitions in the dashboard data.
+        // 1. Try to find it in the fetched dynamic insights
+        const dynamicWidgetRow = (dashboard.insights || []).find((i: any) => i.id === graphId);
 
+        if (dynamicWidgetRow && dynamicWidgetRow.data) {
+            const widgetData = typeof dynamicWidgetRow.data === 'string'
+                ? JSON.parse(dynamicWidgetRow.data)
+                : dynamicWidgetRow.data;
+
+            return <DynamicChart widget={{ ...widgetData, id: graphId }} />;
+        }
+
+        // 2. Fallback to static library
         const widget = WIDGET_LIBRARY.find(w => w.id === graphId);
         if (!widget) return null;
 

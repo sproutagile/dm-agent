@@ -36,7 +36,7 @@ export function VelocityTrendChart() {
                         }}
                     />
                     <Legend />
-                    <Line
+                    <Line isAnimationActive={false}
                         type="monotone"
                         dataKey="committed"
                         stroke="#2D3A8C"
@@ -44,7 +44,7 @@ export function VelocityTrendChart() {
                         name="Committed"
                         dot={{ fill: "#2D3A8C", r: 5 }}
                     />
-                    <Line
+                    <Line isAnimationActive={false}
                         type="monotone"
                         dataKey="completed"
                         stroke="#2E7D32"

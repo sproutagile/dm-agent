@@ -37,7 +37,7 @@ export function SprintCompletionChart() {
                             strokeDasharray={circumference}
                             strokeDashoffset={circumference - progress}
                             strokeLinecap="round"
-                            className="transition-all duration-1000 ease-out"
+                        // Removed transition-all duration-1000 ease-out for PDF export safety
                         />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">

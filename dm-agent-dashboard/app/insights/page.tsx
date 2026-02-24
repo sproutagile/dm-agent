@@ -17,6 +17,7 @@ import { DynamicChart } from "@/components/sprout/DynamicChart";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const WIDGET_COMPONENTS: Record<string, React.FC<any>> = {
     VelocityTrendChart,
@@ -27,14 +28,12 @@ const WIDGET_COMPONENTS: Record<string, React.FC<any>> = {
 };
 
 export default function InsightsPage() {
-    const { generatedInsights, dashboards, removeGeneratedInsight, addGraphToDashboard, dynamicWidgets } = useDashboard();
+    const { generatedInsights, dashboards, removeGeneratedInsight, addGraphToDashboard, removeGraphFromDashboard, dynamicWidgets } = useDashboard();
     const [selectedGraphForAdd, setSelectedGraphForAdd] = useState<string | null>(null);
     const [viewingInsightId, setViewingInsightId] = useState<string | null>(null);
+    const [insightToDelete, setInsightToDelete] = useState<string | null>(null);
 
-    const handleAddToDashboard = (dashboardId: string, widgetId: string) => {
-        addGraphToDashboard(dashboardId, widgetId);
-        setSelectedGraphForAdd(null);
-    };
+    // Remove handleAddToDashboard so the popover doesn't auto-close on selection
 
     const isWidgetInDashboard = (widgetId: string, dashboardId: string): boolean => {
         const dashboard = dashboards.find(d => d.id === dashboardId);
@@ -178,19 +177,25 @@ export default function InsightsPage() {
                                                                     const alreadyAdded = isWidgetInDashboard(insight.widgetId, dashboard.id);
 
                                                                     return (
-                                                                        <button
+                                                                        <label
                                                                             key={dashboard.id}
-                                                                            onClick={() => !alreadyAdded && handleAddToDashboard(dashboard.id, insight.widgetId)}
-                                                                            disabled={alreadyAdded}
-                                                                            className={`w-full flex items-center gap-3 px-4 py-2 text-sm transition-colors ${alreadyAdded
-                                                                                ? "text-gray-400 cursor-not-allowed bg-gray-50"
-                                                                                : "text-gray-700 hover:bg-blue-50 hover:text-blue-700"
-                                                                                }`}
+                                                                            className="w-full flex items-center gap-3 px-4 py-2 text-sm transition-colors cursor-pointer hover:bg-gray-50 text-gray-700"
                                                                         >
-                                                                            <Icon className="h-4 w-4" />
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={alreadyAdded}
+                                                                                onChange={(e) => {
+                                                                                    if (e.target.checked) {
+                                                                                        addGraphToDashboard(dashboard.id, insight.widgetId);
+                                                                                    } else {
+                                                                                        removeGraphFromDashboard(dashboard.id, insight.widgetId);
+                                                                                    }
+                                                                                }}
+                                                                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                                                            />
+                                                                            <Icon className="h-4 w-4 text-gray-500" />
                                                                             <span className="flex-1 text-left truncate">{dashboard.name}</span>
-                                                                            {alreadyAdded && <Check className="h-3 w-3 text-green-500" />}
-                                                                        </button>
+                                                                        </label>
                                                                     );
                                                                 })}
                                                             </div>
@@ -199,7 +204,7 @@ export default function InsightsPage() {
                                                                     onClick={() => setSelectedGraphForAdd(null)}
                                                                     className="w-full flex items-center justify-center gap-2 px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-100 rounded transition-colors"
                                                                 >
-                                                                    Cancel
+                                                                    Close
                                                                 </button>
                                                             </div>
                                                         </div>
@@ -216,7 +221,7 @@ export default function InsightsPage() {
                                                 </div>
 
                                                 <button
-                                                    onClick={() => removeGeneratedInsight(insight.id)}
+                                                    onClick={() => setInsightToDelete(insight.id)}
                                                     className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                                                     title="Delete Insight"
                                                 >
@@ -231,6 +236,20 @@ export default function InsightsPage() {
                     </table>
                 </div>
             )}
+
+            <ConfirmDialog
+                isOpen={!!insightToDelete}
+                onOpenChange={(open) => !open && setInsightToDelete(null)}
+                title="Delete Insight"
+                description="Are you sure you want to delete this insight? This action cannot be undone."
+                confirmText="Delete Insight"
+                onConfirm={() => {
+                    if (insightToDelete) {
+                        removeGeneratedInsight(insightToDelete);
+                        setInsightToDelete(null);
+                    }
+                }}
+            />
         </div>
     );
 }
