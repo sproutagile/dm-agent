@@ -1,17 +1,24 @@
 'use client';
 
-import { useDashboard } from '@/components/DashboardContext';
+import { useDashboard, Dashboard } from '@/components/DashboardContext';
 import { DynamicChart } from './DynamicChart';
 import { LayoutGrid } from 'lucide-react';
 import { Widget } from '@/types/sprout';
+import { Responsive, Layout } from 'react-grid-layout';
+// @ts-ignore
+import { WidthProvider } from "react-grid-layout";
+const ResponsiveGridLayout = WidthProvider(Responsive);
 
-export function WidgetGrid() {
-    const { generatedInsights, dynamicWidgets, removeGeneratedInsight } = useDashboard();
+export function WidgetGrid({ dashboardId }: { dashboardId?: string }) {
+    const { generatedInsights, dynamicWidgets, removeGeneratedInsight, dashboards, updateDashboardLayout } = useDashboard();
 
     // Map insights to widgets
     const widgets = generatedInsights
         .map(insight => dynamicWidgets[insight.widgetId])
         .filter(widget => !!widget) as Widget[];
+
+    const currentDashboard = dashboardId ? dashboards.find(d => d.id === dashboardId) : null;
+    const layout = currentDashboard?.layout || [];
 
     if (widgets.length === 0) {
         return (
@@ -30,8 +37,40 @@ export function WidgetGrid() {
         );
     }
 
+    // Default layout generator for new widgets
+    const defaultLayout = widgets.map((widget, i) => {
+        const existingPos = layout.find((l: any) => l.i === widget.id);
+        if (existingPos) return existingPos;
+
+        return {
+            i: widget.id,
+            x: (i * 6) % 12,
+            y: Math.floor(i / 2) * 4,
+            w: widget.colSpan === 2 ? 12 : 6, // 12 columns total
+            h: 4,
+            minW: 4,
+            minH: 3
+        };
+    });
+
+    const onLayoutChange = (newLayout: any[]) => {
+        if (dashboardId) {
+            updateDashboardLayout(dashboardId, newLayout);
+        }
+    };
+
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ResponsiveGridLayout
+            className="layout"
+            layouts={{ lg: defaultLayout }}
+            breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+            cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
+            rowHeight={100}
+            onLayoutChange={(layout: Layout[]) => onLayoutChange(layout)}
+            draggableHandle=".drag-handle"
+            isDraggable={true}
+            isResizable={true}
+        >
             {widgets.map((widget) => {
                 // Find insight ID for this widget to allow removal
                 const insight = generatedInsights.find(i => i.widgetId === widget.id);
@@ -40,9 +79,13 @@ export function WidgetGrid() {
                 };
 
                 return (
-                    <DynamicChart key={widget.id} widget={widget} onRemove={handleRemove} />
+                    <div key={widget.id}>
+                        <div className="h-full w-full">
+                            <DynamicChart widget={widget} onRemove={handleRemove} />
+                        </div>
+                    </div>
                 );
             })}
-        </div>
+        </ResponsiveGridLayout>
     );
 }

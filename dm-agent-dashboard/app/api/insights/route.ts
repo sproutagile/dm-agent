@@ -22,7 +22,7 @@ export async function GET(req: Request) {
         id: i.id,
         widgetId: i.id, // In SQL logic, row ID is widget ID
         label: i.title,
-        generatedAt: i.created_at,
+        generatedAt: i.created_at ? (i.created_at.includes('Z') ? i.created_at : i.created_at.replace(' ', 'T') + 'Z') : new Date().toISOString(),
         data: i.data ? JSON.parse(i.data) : {} // This contains the dynamic widget config
     }));
 

@@ -40,6 +40,7 @@ interface DashboardContextType {
     deleteDashboard: (id: string) => Promise<void>;
     addGraphToDashboard: (dashboardId: string, graphId: string) => Promise<void>;
     removeGraphFromDashboard: (dashboardId: string, graphId: string) => Promise<void>;
+    updateDashboardLayout: (dashboardId: string, layout: any[]) => Promise<void>;
     getDashboard: (id: string) => Dashboard | undefined;
 
     // Insights
@@ -253,6 +254,18 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         });
     };
 
+    const updateDashboardLayout = async (dashboardId: string, layout: any[]) => {
+        setDashboards((prev) =>
+            prev.map((d) => (d.id === dashboardId ? { ...d, layout } : d))
+        );
+
+        await fetch(`/api/dashboards/${dashboardId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ layout }),
+        });
+    };
+
     const getDashboard = (id: string) => dashboards.find((d) => d.id === id);
 
     const addGeneratedInsight = async (widgetId: string, label: string, data?: any) => {
@@ -390,6 +403,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
                 deleteDashboard,
                 addGraphToDashboard,
                 removeGraphFromDashboard,
+                updateDashboardLayout,
                 getDashboard,
                 addGeneratedInsight,
                 removeGeneratedInsight,

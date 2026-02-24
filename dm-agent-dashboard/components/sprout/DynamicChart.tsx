@@ -21,7 +21,7 @@ import {
     ResponsiveContainer,
     Legend,
 } from 'recharts';
-import { X, BarChart3, Pencil, Save, Plus, Trash2, RefreshCw } from 'lucide-react';
+import { X, BarChart3, Pencil, Save, Plus, Trash2, RefreshCw, GripHorizontal } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 
@@ -517,7 +517,8 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
     return (
         <Card className="relative overflow-hidden border-0 shadow-sm hover:shadow-lg transition-all duration-300 bg-white animate-fadeIn">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 drag-handle cursor-move">
+                    <GripHorizontal className="h-5 w-5 text-gray-400 hover:text-gray-600 transition-colors" />
                     <div className="p-2 rounded-lg bg-blue-50">
                         <BarChart3 className="h-4 w-4 text-[#2D3A8C]" />
                     </div>
