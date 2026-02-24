@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { Header } from "@/components/Header";
-import { DashboardProvider } from "@/components/DashboardContext";
+import { DashboardProvider, useDashboard } from "@/components/DashboardContext";
 import { WidgetListener } from "@/components/sprout/WidgetListener";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -25,9 +25,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <WidgetListener />
             <Sidebar />
             <Header />
-            <main className="ml-20 pt-24 min-h-screen bg-background p-8">
+            <MainLayout>
                 {children}
-            </main>
+            </MainLayout>
         </DashboardProvider>
+    );
+}
+
+function MainLayout({ children }: { children: React.ReactNode }) {
+    const { isSidebarExpanded } = useDashboard();
+
+    return (
+        <main
+            className="pt-24 min-h-screen bg-background p-8 transition-all duration-300 ease-in-out"
+            style={{ marginLeft: isSidebarExpanded ? '256px' : '80px' }}
+        >
+            {children}
+        </main>
     );
 }

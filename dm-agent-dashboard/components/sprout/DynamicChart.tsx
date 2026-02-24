@@ -70,7 +70,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                     endpoint: endpoint,
                     id: widget.id,
                     title: widget.title,
-                    type: widget.chartType
+                    type: widget.chartType,
                 })
             });
 
@@ -82,10 +82,36 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
             const responseData = await res.json();
 
             // Expecting { data: [...] } or just [...]
-            let newData = responseData.data || responseData;
+            const newData = responseData.data || responseData;
 
             if (Array.isArray(newData) && newData.length > 0) {
-                updateDynamicWidget(widget.id, { data: newData });
+                // VERY IMPORTANT: The original widget data schema is the STRICTEST source of truth.
+                // Since the LLM occasionally hallucinates extra categories (e.g. inventing a 'Sprint 4'), 
+                // we rigorously mask the incoming newData against the current data structure.
+
+                const currentSchema = Array.isArray(widget.data) ? widget.data : [];
+
+                if (currentSchema.length > 0) {
+                    const striclyMaskedData = currentSchema.map((originalPoint: any) => {
+                        // Attempt to find a matching data point from the LLM's new response
+                        const matchingNewPoint = newData.find((n: any) =>
+                            n.name && originalPoint.name && n.name.toString().toLowerCase() === originalPoint.name.toString().toLowerCase()
+                        );
+
+                        return {
+                            ...originalPoint,
+                            value: matchingNewPoint && matchingNewPoint.value !== undefined
+                                ? matchingNewPoint.value
+                                : originalPoint.value // Fallback to current if missing
+                        };
+                    });
+
+                    updateDynamicWidget(widget.id, { data: striclyMaskedData });
+                } else {
+                    // Start of life - widget has no data, so accept the initial configuration
+                    updateDynamicWidget(widget.id, { data: newData });
+                }
+
                 setError(null);
             } else if (Array.isArray(newData) && newData.length === 0) {
                 // Empty array returned

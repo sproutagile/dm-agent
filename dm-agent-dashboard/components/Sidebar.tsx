@@ -19,8 +19,7 @@ const CURATED_ICONS = [
 export function Sidebar() {
     const pathname = usePathname();
     const router = useRouter();
-    const [isExpanded, setIsExpanded] = useState(false);
-    const { dashboards, addDashboard, renameDashboard, updateDashboardIcon, deleteDashboard } = useDashboard();
+    const { isSidebarExpanded: isExpanded, setIsSidebarExpanded: setIsExpanded, dashboards, addDashboard, renameDashboard, updateDashboardIcon, deleteDashboard } = useDashboard();
 
     // Inline create state
     const [isCreating, setIsCreating] = useState(false);
@@ -106,6 +105,8 @@ export function Sidebar() {
 
     return (
         <div
+            onMouseEnter={() => setIsExpanded(true)}
+            onMouseLeave={() => setIsExpanded(false)}
             className={`fixed left-0 top-0 h-screen bg-[#14532B] flex flex-col z-50 transition-all duration-300 ease-in-out ${isExpanded ? "w-64" : "w-20"
                 }`}
         >

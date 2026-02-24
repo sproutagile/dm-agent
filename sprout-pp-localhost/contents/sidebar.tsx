@@ -44,15 +44,18 @@ function SidebarContent() {
     }, [])
 
     useEffect(() => {
+        // Ensure transition is applied so it smoothly pushes the body instead of snapping
+        document.body.style.transition = "margin-right 300ms ease-in-out"
+
         if (isOpen) {
             document.body.style.marginRight = "384px" // w-96
-            document.body.style.transition = "margin-right 0.3s ease-in-out"
         } else {
             document.body.style.marginRight = "0px"
         }
 
         return () => {
             document.body.style.marginRight = "0px"
+            document.body.style.transition = ""
         }
     }, [isOpen])
 
@@ -90,7 +93,7 @@ function SidebarContent() {
                 style={{
                     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
                     transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
-                    transition: 'transform 200ms ease-in-out'
+                    transition: 'transform 300ms ease-in-out'
                 }}
             >
                 <Sidebar onClose={handleClose} />

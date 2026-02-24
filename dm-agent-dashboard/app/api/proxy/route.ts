@@ -32,10 +32,9 @@ export async function POST(req: Request) {
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`Webhook failed: ${response.status} ${response.statusText}`, errorText);
+            console.error(`Webhook failed: ${response.status} ${response.statusText}`);
             return NextResponse.json(
-                { error: `Webhook error: ${response.status} ${response.statusText}`, details: errorText },
+                { error: `Webhook error: ${response.status}` },
                 { status: response.status }
             );
         }
@@ -46,16 +45,18 @@ export async function POST(req: Request) {
 
         try {
             data = JSON.parse(text);
+             
         } catch (e) {
             // If parsing fails, it might be because the LLM wrapped it in markdown or added text.
             // Try to extract JSON from the string.
             console.log("Raw response is not JSON, attempting to extract...");
-            // Use [\s\S]* instead of . with s flag for multiline matching if needed, or just standard match
+
             const jsonMatch = text.match(/\[[\s\S]*\]/) || text.match(/\{[\s\S]*\}/);
 
             if (jsonMatch) {
                 try {
                     data = JSON.parse(jsonMatch[0]);
+                     
                 } catch (e2) {
                     console.error("Extraction parse error:", e2);
                     // Proceed to check for output field logic below or throw
@@ -108,15 +109,18 @@ export async function POST(req: Request) {
                 if (innerMatch) {
                     try {
                         data = JSON.parse(innerMatch[0]);
-                    } catch (e2) { }
+                    } catch (e2) {
+                        // ignore
+                    }
                 }
             }
         }
 
         return NextResponse.json(data);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Proxy Internal Error:', error);
-        return NextResponse.json({ error: `Proxy failed: ${error.message}` }, { status: 500 });
+        const ermsg = error instanceof Error ? error.message : "Unknown error occurred";
+        return NextResponse.json({ error: `Proxy failed: ${ermsg}` }, { status: 500 });
     }
 }

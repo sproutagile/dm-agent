@@ -30,8 +30,10 @@ interface DashboardContextType {
     chatMessages: ChatMessage[];
     kpiData: KPIData;
     loading: boolean;
+    isSidebarExpanded: boolean;
 
     // Actions
+    setIsSidebarExpanded: (expanded: boolean) => void;
     addDashboard: (name: string, icon: string) => Promise<string>;
     renameDashboard: (id: string, name: string) => Promise<void>;
     updateDashboardIcon: (id: string, icon: string) => Promise<void>;
@@ -70,6 +72,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
     const [kpiData, setKpiData] = useState<KPIData>({ activeTasks: 0, throughput: 0, blockers: 0 });
     const [loading, setLoading] = useState(true);
+    const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
     // Initial Data Load
     useEffect(() => {
@@ -379,6 +382,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
                 chatMessages,
                 kpiData,
                 loading,
+                isSidebarExpanded,
+                setIsSidebarExpanded,
                 addDashboard,
                 renameDashboard,
                 updateDashboardIcon,

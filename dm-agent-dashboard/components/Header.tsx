@@ -15,7 +15,7 @@ export function Header() {
     const pathname = usePathname();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
-    const { getDashboard, user, logout, loading } = useDashboard();
+    const { getDashboard, user, logout, loading, isSidebarExpanded } = useDashboard();
 
     // Handle dynamic dashboard titles
     let pageTitle = routeTitles[pathname] || "Dashboard";
@@ -39,7 +39,10 @@ export function Header() {
     }, []);
 
     return (
-        <header className="fixed top-0 right-0 left-20 h-16 z-40 bg-white border-b border-gray-200 flex items-center justify-between px-6">
+        <header
+            className="fixed top-0 right-0 h-16 z-40 bg-white border-b border-gray-200 flex items-center justify-between px-6 transition-all duration-300 ease-in-out"
+            style={{ left: isSidebarExpanded ? '256px' : '80px' }}
+        >
             {/* Left: Page Title */}
             <div>
                 <h1 className="text-2xl font-semibold text-gray-800">{pageTitle}</h1>
