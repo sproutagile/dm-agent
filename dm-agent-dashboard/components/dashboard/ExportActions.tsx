@@ -49,14 +49,19 @@ export function ExportActions({ targetId, dashboardName = "Dashboard" }: ExportA
 
             // Add margins
             const margin = 10;
+            const textOffset = 15; // Space for the title
             const contentWidth = pdfWidth - (margin * 2);
+
+            // Add Title
+            pdf.setFontSize(20);
+            pdf.text(dashboardName, margin, margin + 8);
 
             // Calculate image height to maintain aspect ratio
             const imgProps = pdf.getImageProperties(dataUrl);
             const imgHeight = (imgProps.height * contentWidth) / imgProps.width;
 
-            // Add image to PDF
-            pdf.addImage(dataUrl, 'PNG', margin, margin, contentWidth, Math.min(imgHeight, pdfHeight - (margin * 2)));
+            // Add image to PDF, shifted down
+            pdf.addImage(dataUrl, 'PNG', margin, margin + textOffset, contentWidth, Math.min(imgHeight, pdfHeight - (margin * 2) - textOffset));
 
             // Save the PDF
             pdf.save(`${dashboardName.replace(/\s+/g, "_")}_Export.pdf`);
