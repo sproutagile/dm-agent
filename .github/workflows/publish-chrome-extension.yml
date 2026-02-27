@@ -1,0 +1,39 @@
+name: Publish Chrome Extension
+on:
+  pull_request:
+    branches: [master]
+    types: [closed]
+    paths:
+      - "sprout-pp/**"
+jobs:
+  publish:
+    if: ${{ github.event.pull_request.merged == true }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./sprout-pp
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Use Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install deps
+        run: npm ci
+      - name: Build extension
+        run: npm run build
+      - name: Zip build output
+        run: |
+          cd dist
+          zip -r ../extension.zip .
+          cd ..
+      - name: Upload & publish to Chrome Web Store
+        uses: mnao305/chrome-extension-upload@v5
+        with:
+          extension-id: ${{ secrets.CWS_EXTENSION_ID }}
+          client-id: ${{ secrets.CWS_CLIENT_ID }}
+          client-secret: ${{ secrets.CWS_CLIENT_SECRET }}
+          refresh-token: ${{ secrets.CWS_REFRESH_TOKEN }}
+          file-path: sprout-pp/extension.zip
+          publish: true
