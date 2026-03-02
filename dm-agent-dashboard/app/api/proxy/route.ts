@@ -5,8 +5,8 @@ export async function POST(req: Request) {
         const body = await req.json();
         const { endpoint, type, ...rest } = body;
 
-        // Default webhook URL if not provided
-        const targetUrl = endpoint || 'https://agile.sprout.ph/webhook/049a56fd-7cf2-46b6-abe9-b24d41ecc092/chat';
+        // Use the exact webhook format from the sprout-pp extension
+        const targetUrl = endpoint || 'http://agile.sprout.ph/automations/webhook/049a56fd-7cf2-46b6-abe9-b24d41ecc092/chat';
 
         // The webhook likely expects "chatInput" for n8n/chat workflows.
         // We append strict instructions to ensure we get JSON back.
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
 
         try {
             data = JSON.parse(text);
-             
+
         } catch (e) {
             // If parsing fails, it might be because the LLM wrapped it in markdown or added text.
             // Try to extract JSON from the string.
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
             if (jsonMatch) {
                 try {
                     data = JSON.parse(jsonMatch[0]);
-                     
+
                 } catch (e2) {
                     console.error("Extraction parse error:", e2);
                     // Proceed to check for output field logic below or throw

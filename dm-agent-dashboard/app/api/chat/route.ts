@@ -3,6 +3,7 @@ import { getDb } from '@/lib/db';
 import { verifyTokenEdge } from '@/lib/auth-edge'; // Use edge auth for consistency or lib/auth? APIs run in Node, so lib/auth is fine, but cookie parsing is needed.
 import { verifyToken } from '@/lib/auth';
 import { cookies } from 'next/headers';
+import { parseAndStoreMetrics } from '@/lib/chatParser';
 
 // Helper to get user
 async function getUser() {
@@ -36,6 +37,12 @@ export async function POST(req: Request) {
         'INSERT INTO chat_messages (id, user_id, role, content) VALUES (?, ?, ?, ?)',
         id, user.id, role, content
     );
+
+    // BACKGROUND PARSER: Look for structured metrics in assistant/webhook responses
+    if (role === 'assistant' || role === 'system') {
+        // Execute asynchronously so the webhook doesn't block
+        parseAndStoreMetrics(user.id, content).catch(console.error);
+    }
 
     return NextResponse.json({ id, role, content, created_at: new Date().toISOString() });
 }

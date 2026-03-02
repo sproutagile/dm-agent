@@ -10,10 +10,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const isAuthPage = pathname === "/login" || pathname === "/register";
 
+    const isPublicSharePage = pathname?.startsWith("/share/");
+
     if (isAuthPage) {
         return (
             <DashboardProvider>
                 <main className="min-h-screen bg-gray-50 flex flex-col justify-center">
+                    {children}
+                </main>
+            </DashboardProvider>
+        );
+    }
+
+    if (isPublicSharePage) {
+        return (
+            <DashboardProvider>
+                <main className="min-h-screen bg-gray-50">
                     {children}
                 </main>
             </DashboardProvider>

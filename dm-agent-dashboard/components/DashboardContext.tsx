@@ -40,6 +40,7 @@ interface DashboardContextType {
     deleteDashboard: (id: string) => Promise<void>;
     addGraphToDashboard: (dashboardId: string, graphId: string) => Promise<void>;
     removeGraphFromDashboard: (dashboardId: string, graphId: string) => Promise<void>;
+    reorderDashboardGraphs: (dashboardId: string, newGraphs: string[]) => Promise<void>;
     updateDashboardLayout: (dashboardId: string, layout: any[]) => Promise<void>;
     getDashboard: (id: string) => Dashboard | undefined;
 
@@ -55,8 +56,10 @@ interface DashboardContextType {
     addMessage: (role: 'user' | 'assistant' | 'system', content: string) => Promise<void>;
     clearMessages: () => Promise<void>;
 
-    // KPIs
+    // KPIs & Metrics
     updateKPIs: (data: Partial<KPIData>) => Promise<void>;
+    sourceMetrics: Record<string, any>;
+    refreshMetrics: () => Promise<void>;
 
     // Auth
     logout: () => Promise<void>;
@@ -72,6 +75,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     const [dynamicWidgets, setDynamicWidgets] = useState<Record<string, any>>({});
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
     const [kpiData, setKpiData] = useState<KPIData>({ activeTasks: 0, throughput: 0, blockers: 0 });
+    const [sourceMetrics, setSourceMetrics] = useState<Record<string, any>>({});
     const [loading, setLoading] = useState(true);
     const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
@@ -91,11 +95,12 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
                     }
 
                     // Only fetch other data if logged in
-                    const [dashRes, insightRes, chatRes, kpiRes] = await Promise.all([
+                    const [dashRes, insightRes, chatRes, kpiRes, metricsRes] = await Promise.all([
                         fetch("/api/dashboards"),
                         fetch("/api/insights"),
                         fetch("/api/chat"),
-                        fetch("/api/kpi")
+                        fetch("/api/kpi"),
+                        fetch("/api/metrics")
                     ]);
 
                     if (dashRes.ok) setDashboards(await dashRes.json());
@@ -129,6 +134,10 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
                             blockers: kpis.blockers || 0
                         });
                     }
+
+                    if (metricsRes.ok) {
+                        setSourceMetrics(await metricsRes.json());
+                    }
                 }
             } catch (error) {
                 console.error("Failed to load initial data", error);
@@ -143,8 +152,30 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
             try {
                 // Only poll if we have successfully loaded a user profile initially 
                 // Using the 'user' closure variable directly won't update in setInterval, but the API will just return 401 if unauth'd anyway
-                const insightRes = await fetch("/api/insights");
-                if (!insightRes.ok) return; // 401 naturally handles the "unauthenticated" skip
+                const [insightRes, metricsRes] = await Promise.all([
+                    fetch("/api/insights", {
+                        cache: 'no-store',
+                        headers: {
+                            'Pragma': 'no-cache',
+                            'Cache-Control': 'no-cache'
+                        }
+                    }),
+                    fetch("/api/metrics", {
+                        cache: 'no-store',
+                        headers: {
+                            'Pragma': 'no-cache',
+                            'Cache-Control': 'no-cache'
+                        }
+                    })
+                ]);
+
+                if (!insightRes.ok && !metricsRes.ok) return; // 401 naturally handles the "unauthenticated" skip
+
+                if (metricsRes.ok) {
+                    const latestMetrics = await metricsRes.json();
+                    setSourceMetrics(latestMetrics);
+                }
+
                 if (insightRes.ok) {
                     const insights: any[] = await insightRes.json();
 
@@ -254,6 +285,18 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         });
     };
 
+    const reorderDashboardGraphs = async (dashboardId: string, newGraphs: string[]) => {
+        setDashboards((prev) =>
+            prev.map((d) => (d.id === dashboardId ? { ...d, graphs: newGraphs } : d))
+        );
+
+        await fetch(`/api/dashboards/${dashboardId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ graphs: newGraphs }),
+        });
+    };
+
     const updateDashboardLayout = async (dashboardId: string, layout: any[]) => {
         setDashboards((prev) =>
             prev.map((d) => (d.id === dashboardId ? { ...d, layout } : d))
@@ -326,8 +369,26 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         setDynamicWidgets(prev => ({ ...prev, [widget.id]: widget }));
     };
 
-    const updateDynamicWidget = (id: string, updates: any) => {
-        setDynamicWidgets(prev => ({ ...prev, [id]: { ...prev[id], ...updates } }));
+    const updateDynamicWidget = async (id: string, updates: any) => {
+        setDynamicWidgets(prev => {
+            const nextState = { ...prev[id], ...updates };
+            return { ...prev, [id]: nextState };
+        });
+
+        // Persist back to the DB so refresh/reload doesn't wipe changes
+        try {
+            // we need to pass the FULL updated object state to the DB, not just the isolated delta
+            const currentWidget = dynamicWidgets[id] || {};
+            const payloadToSave = { ...currentWidget, ...updates };
+
+            await fetch(`/api/insights/${id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payloadToSave),
+            });
+        } catch (e) {
+            console.error("Failed to persist insights update:", e);
+        }
     };
 
     const addMessage = async (role: 'user' | 'assistant' | 'system', content: string) => {
@@ -360,6 +421,24 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
         });
+    };
+
+    const refreshMetrics = async () => {
+        try {
+            const metricsRes = await fetch("/api/metrics", {
+                cache: 'no-store',
+                headers: {
+                    'Pragma': 'no-cache',
+                    'Cache-Control': 'no-cache'
+                }
+            });
+            if (metricsRes.ok) {
+                const latestMetrics = await metricsRes.json();
+                setSourceMetrics(latestMetrics);
+            }
+        } catch (err) {
+            console.error("Manual refresh of metrics failed:", err);
+        }
     };
 
     const logout = async () => {
@@ -403,6 +482,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
                 deleteDashboard,
                 addGraphToDashboard,
                 removeGraphFromDashboard,
+                reorderDashboardGraphs,
                 updateDashboardLayout,
                 getDashboard,
                 addGeneratedInsight,
@@ -412,6 +492,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
                 addMessage,
                 clearMessages,
                 updateKPIs,
+                sourceMetrics,
+                refreshMetrics,
                 logout,
                 updateUser
             }}

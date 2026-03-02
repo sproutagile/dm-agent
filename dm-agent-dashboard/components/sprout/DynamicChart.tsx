@@ -33,7 +33,7 @@ interface DynamicChartProps {
 const COLORS = ['#2D3A8C', '#2E7D32', '#F5A623', '#02AFCE', '#8952F6'];
 
 export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
-    const { updateDynamicWidget } = useDashboard();
+    const { updateDynamicWidget, refreshMetrics } = useDashboard();
     const [isEditing, setIsEditing] = useState(false);
     const [editTitle, setEditTitle] = useState(widget.title);
     const [editType, setEditType] = useState(widget.chartType || 'bar');
@@ -54,6 +54,12 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
     const fetchData = async () => {
         setIsLoading(true);
         setError(null);
+
+        // Trigger a global SQLite source metrics refresh silently alongside this 
+        if (refreshMetrics) {
+            refreshMetrics().catch(console.error);
+        }
+
         try {
             // Use the configured webhook or default to the one in the proxy if empty but interval is set?
             // Actually, if it's empty, maybe we shouldn't fetch unless we rely on a default.
@@ -75,8 +81,14 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
             });
 
             if (!res.ok) {
-                const errData = await res.json().catch(() => ({}));
-                throw new Error(errData.error || `Error ${res.status}: Failed to fetch data`);
+                // Safely parse JSON error, fallback if the server returned raw text or HTML (like a 502 Bad Gateway)
+                let errData: any = {};
+                try {
+                    errData = await res.json();
+                } catch {
+                    errData = { error: res.statusText };
+                }
+                throw new Error(errData?.error || `Error ${res.status}: Failed to fetch data`);
             }
 
             const responseData = await res.json();
@@ -107,9 +119,11 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                     });
 
                     updateDynamicWidget(widget.id, { data: striclyMaskedData });
+                    setDataRows(striclyMaskedData);
                 } else {
                     // Start of life - widget has no data, so accept the initial configuration
                     updateDynamicWidget(widget.id, { data: newData });
+                    setDataRows(newData);
                 }
 
                 setError(null);
@@ -517,8 +531,10 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
     return (
         <Card className="relative overflow-hidden border-0 shadow-sm hover:shadow-lg transition-all duration-300 bg-white animate-fadeIn">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <div className="flex items-center gap-2 drag-handle cursor-move">
-                    <GripHorizontal className="h-5 w-5 text-gray-400 hover:text-gray-600 transition-colors" />
+                <div className="flex items-center gap-2">
+                    <div className="drag-handle cursor-move">
+                        <GripHorizontal className="h-5 w-5 text-gray-400 hover:text-gray-600 transition-colors" />
+                    </div>
                     <div className="p-2 rounded-lg bg-blue-50">
                         <BarChart3 className="h-4 w-4 text-[#2D3A8C]" />
                     </div>

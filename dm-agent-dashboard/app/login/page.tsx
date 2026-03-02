@@ -30,8 +30,8 @@ export default function LoginPage() {
                 return;
             }
 
-            // Redirect strictly to /insights as requested by user
-            router.push('/insights');
+            // Force a full reload to /insights so that DashboardContext re-fetches the user profile and dashboard data
+            window.location.href = '/insights';
         } catch (err) {
             setError('An error occurred');
         }

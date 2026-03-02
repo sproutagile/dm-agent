@@ -107,7 +107,7 @@ export function Sidebar() {
         <div
             onMouseEnter={() => setIsExpanded(true)}
             onMouseLeave={() => setIsExpanded(false)}
-            className={`fixed left-0 top-0 h-screen bg-[#14532B] flex flex-col z-50 transition-all duration-300 ease-in-out ${isExpanded ? "w-64" : "w-20"
+            className={`fixed left-0 top-0 h-screen bg-[#14532B] flex flex-col z-50 transition-all duration-500 ease-in-out ${isExpanded ? "w-64" : "w-20"
                 }`}
         >
             {/* Header / Logo */}
@@ -125,7 +125,7 @@ export function Sidebar() {
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto">
+            <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
                 {/* Generated Insights */}
                 <div>
                     <Link

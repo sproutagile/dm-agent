@@ -55,7 +55,7 @@ export default function ProfilePage() {
     };
 
     return (
-        <div className="pt-20 px-6">
+        <div className="px-6">
             {/* Side-by-Side Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Left Column: Identity Card */}

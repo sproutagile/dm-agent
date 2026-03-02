@@ -18,5 +18,18 @@ export async function getDb() {
 
     await dbInstance.exec('PRAGMA foreign_keys = ON;');
 
+    // Ensure the new KPI metrics table exists
+    await dbInstance.exec(`
+        CREATE TABLE IF NOT EXISTS source_metrics (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            metric_key TEXT NOT NULL,
+            data TEXT NOT NULL,
+            source TEXT NOT NULL,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(user_id, metric_key)
+        )
+    `);
+
     return dbInstance;
 }
