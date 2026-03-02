@@ -31,7 +31,8 @@ export default function DashboardPage() {
     const params = useParams();
     const dashboardId = params.id as string;
     const [widgetToRemove, setWidgetToRemove] = useState<string | null>(null);
-    const { getDashboard, removeGraphFromDashboard, dynamicWidgets } = useDashboard();
+    const dashboardContext = useDashboard();
+    const { getDashboard, removeGraphFromDashboard, dynamicWidgets } = dashboardContext;
     const dashboard = getDashboard(dashboardId);
 
     if (!dashboard) {
@@ -44,6 +45,58 @@ export default function DashboardPage() {
 
     const handleRemove = (graphId: string) => {
         removeGraphFromDashboard(dashboardId, graphId);
+    };
+
+    const handleDragStart = (e: React.DragEvent, graphId: string) => {
+        // Prevent drag if interacting with chart itself, buttons or inputs
+        const target = e.target as HTMLElement;
+        if (
+            target.closest('.recharts-wrapper') ||
+            target.tagName === 'BUTTON' ||
+            target.tagName === 'INPUT' ||
+            target.tagName === 'SELECT'
+        ) {
+            e.preventDefault();
+            return;
+        }
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", graphId);
+        // Tiny timeout to add dragged styling after the native ghost image is taken
+        setTimeout(() => {
+            const el = document.getElementById(`widget-${graphId}`);
+            if (el) el.classList.add('opacity-50');
+        }, 0);
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault(); // allow drop
+        e.dataTransfer.dropEffect = "move";
+    };
+
+    const handleDrop = async (e: React.DragEvent, targetGraphId: string) => {
+        e.preventDefault();
+        const draggedGraphId = e.dataTransfer.getData("text/plain");
+
+        if (draggedGraphId && draggedGraphId !== targetGraphId) {
+            const newGraphs = [...dashboard.graphs];
+            const draggedIndex = newGraphs.indexOf(draggedGraphId);
+            const targetIndex = newGraphs.indexOf(targetGraphId);
+
+            if (draggedIndex > -1 && targetIndex > -1) {
+                // Remove from old position
+                newGraphs.splice(draggedIndex, 1);
+                // Insert at new position
+                newGraphs.splice(targetIndex, 0, draggedGraphId);
+
+                // Call context update
+                await dashboardContext.reorderDashboardGraphs(dashboardId, newGraphs);
+            }
+        }
+    };
+
+    const handleDragEnd = (e: React.DragEvent, graphId: string) => {
+        const el = document.getElementById(`widget-${graphId}`);
+        if (el) el.classList.remove('opacity-50');
     };
 
     // If no graphs, show empty state
@@ -116,6 +169,13 @@ export default function DashboardPage() {
 
                         if (widget.type === "scorecard") {
                             const props = widget.props as { title: string; value: string; trend?: { value: string; direction: "up" | "down" } };
+
+                            // Override default value with live background-parsed metrics if available!
+                            const liveMetric = dashboardContext.sourceMetrics && dashboardContext.sourceMetrics[graphId];
+                            if (liveMetric && liveMetric.data) {
+                                props.value = liveMetric.data;
+                            }
+
                             WidgetContent = <ScorecardWidget {...props} />;
                         } else if (widget.type === "text") {
                             const props = widget.props as { title: string; content: string };
@@ -138,8 +198,14 @@ export default function DashboardPage() {
 
                     return (
                         <div
+                            id={`widget-${graphId}`}
                             key={graphId}
-                            className={`relative group min-h-[320px] ${colSpan === 2 ? 'md:col-span-2' : colSpan === 3 ? 'md:col-span-2 lg:col-span-3' : ''
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, graphId)}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, graphId)}
+                            onDragEnd={(e) => handleDragEnd(e, graphId)}
+                            className={`relative group min-h-[320px] transition-opacity duration-200 ${colSpan === 2 ? 'md:col-span-2' : colSpan === 3 ? 'md:col-span-2 lg:col-span-3' : ''
                                 }`}
                         >
                             {/* Remove Button - Hidden during export usually, but html2canvas might capture it if not handled. 
