@@ -13,7 +13,7 @@ export async function POST(req: Request) {
         const contextInstruction = rest.context ? ` Context: ${rest.context}.` : "";
 
         // Simplified prompt to avoid 502/timeouts.
-        const prompt = `Analyze delivery metrics for ${rest.title || 'this chart'}. Check for webhook nodes for datasources. Return a raw JSON array of objects with "name" and "value" keys based on REAL data.`;
+        const prompt = `Analyze delivery metrics for ${rest.title || 'this chart'}. Check for webhook nodes for datasources. Return a JSON array of objects with "name" and "value" keys based on REAL data. YOU MUST ALSO include a structured Data Pointer block anywhere in your response (e.g., at the end of the text). Use the exact format: [SOURCE: GSheets | ID: <spreadsheet_id> | TAB: <tab_name> | CELL: <cell_coordinate> | KEY: <unique_metric_name>]`;
 
         const payload = {
             ...rest,
@@ -48,75 +48,79 @@ export async function POST(req: Request) {
 
         } catch (e) {
             // If parsing fails, it might be because the LLM wrapped it in markdown or added text.
-            // Try to extract JSON from the string.
-            console.log("Raw response is not JSON, attempting to extract...");
+            // Strip the DATA POINTER block first, as its brackets confuse JSON extraction
+            const cleanedText = text.replace(/\[SOURCE:[\s\S]*?\]/g, '').trim();
 
-            const jsonMatch = text.match(/\[[\s\S]*\]/) || text.match(/\{[\s\S]*\}/);
+            console.log("Raw response is not JSON, attempting to extract array or object...");
 
-            if (jsonMatch) {
+            // Find the JSON array: look specifically for [{...}] pattern
+            const arrayStart = cleanedText.indexOf('[');
+            const arrayEnd = cleanedText.lastIndexOf(']');
+
+            const objectStart = cleanedText.indexOf('{');
+            const objectEnd = cleanedText.lastIndexOf('}');
+
+            if (arrayStart !== -1 && arrayEnd !== -1 && arrayStart < arrayEnd) {
                 try {
-                    data = JSON.parse(jsonMatch[0]);
+                    data = JSON.parse(cleanedText.substring(arrayStart, arrayEnd + 1));
+                } catch (e2) { }
+            }
 
-                } catch (e2) {
-                    console.error("Extraction parse error:", e2);
-                    // Proceed to check for output field logic below or throw
+            if (!data && objectStart !== -1 && objectEnd !== -1 && objectStart < objectEnd) {
+                try {
+                    data = JSON.parse(cleanedText.substring(objectStart, objectEnd + 1));
+                } catch (e3) {
+                    console.error("Extraction parse error:", e3);
                 }
             }
 
             if (!data) {
-                // It's just text (like the "output": "..." case from n8n sometimes)
-                // If it's the n8n object { "output": "text" }, we might need to parse the inner text.
-                try {
-                    // We already failed text parse above, but check if we can parse it as a simple object now?
-                    // Actually, if the FIRST JSON.parse failed, text is NOT valid JSON.
-                    // But maybe the extraction above failed too.
-
-                    // Let's look for the specific n8n pattern where output might be a key in a larger string, 
-                    // or maybe the user meant the response IS valid JSON but has an "output" key containing the string.
-
-                    // Wait, if line 40 `JSON.parse(text)` failed, then `text` is NOT a JSON object.
-                    // So looking for `potentialObj.output` implies `text` WAS valid JSON. 
-                    // My previous logic was slightly flawed nesting.
-
-                    // Let's re-evaluate:
-                    // 1. Try to parse `text` as JSON.
-                    // 2. If success -> check if it has `output` string that needs parsing.
-                    // 3. If fail -> try to finding JSON substring.
-
-                    // Since we are in the catch block of step 1, we know `text` is not JSON.
-                    // So we only rely on extraction.
-                    throw new Error("Could not parse JSON from response");
-                } catch (e3) {
-                    // If we are here, we really couldn't get JSON.
-                    // One last check: if the text itself IS the "output" content from n8n (unlikely if n8n returns JSON usually)
-                    // But sometimes n8n returns just the string if configured to return "Body".
-                    throw new Error("Invalid response format: " + text.substring(0, 50));
-                }
+                throw new Error("Could not parse JSON from response");
             }
         }
 
-        // Post-processing: If data is an object with "output", try to parse "output"
-        // This handles { "output": "[...]" } case which is valid JSON but stringified internal data
+        // Post-processing: handle n8n's { "output": "..." } wrapper
         if (data && !Array.isArray(data) && typeof data === 'object' && data.output && typeof data.output === 'string') {
+            // Strip pointer from output string before extracting JSON
+            const cleanedOutput = data.output.replace(/\[SOURCE:[\s\S]*?\]/g, '').trim();
             try {
-                const innerData = JSON.parse(data.output);
-                if (Array.isArray(innerData)) {
-                    data = innerData;
-                }
+                const innerData = JSON.parse(cleanedOutput);
+                if (Array.isArray(innerData)) data = innerData;
             } catch (e) {
-                // Try extracting from output string
-                const innerMatch = data.output.match(/\[[\s\S]*\]/);
-                if (innerMatch) {
-                    try {
-                        data = JSON.parse(innerMatch[0]);
-                    } catch (e2) {
-                        // ignore
-                    }
+                const arrayIdx = cleanedOutput.indexOf('[');
+                const arrayEndIdx = cleanedOutput.lastIndexOf(']');
+                if (arrayIdx !== -1 && arrayEndIdx > arrayIdx) {
+                    try { data = JSON.parse(cleanedOutput.substring(arrayIdx, arrayEndIdx + 1)); } catch (e2) { }
                 }
             }
         }
 
-        return NextResponse.json(data);
+        // --- ENHANCEMENT: AI Data Pointer Extraction ---
+        // Even if we fetched a chart, if the LLM provided a pointer, we can pass it back via a custom header
+        // since we don't want to mutate the JSON body if the frontend strictly expects an array.
+        // Actually, we can return exactly what we parsed.
+
+        const pointerRegex = /\[SOURCE:\s*(.*?)\s*\|\s*ID:\s*(.*?)\s*\|\s*TAB:\s*(.*?)\s*\|\s*CELL:\s*(.*?)\s*\|\s*KEY:\s*(.*?)\]/;
+        const pointerMatch = text.match(pointerRegex);
+
+        const responseData = data;
+        console.log("[Proxy] Final parsed data to return:", JSON.stringify(responseData)?.substring(0, 300));
+
+        // Next.js NextResponse allows us to add headers
+        const res = NextResponse.json(responseData);
+
+        if (pointerMatch) {
+            const pointerObj = {
+                source_system: pointerMatch[1].trim(),
+                source_id: pointerMatch[2].trim(),
+                source_tab: pointerMatch[3].trim(),
+                source_cell: pointerMatch[4].trim(),
+                key: pointerMatch[5].trim()
+            };
+            res.headers.set('X-Source-Pointer', JSON.stringify(pointerObj));
+        }
+
+        return res;
 
     } catch (error: unknown) {
         console.error('Proxy Internal Error:', error);

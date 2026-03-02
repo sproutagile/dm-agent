@@ -21,7 +21,7 @@ import {
     ResponsiveContainer,
     Legend,
 } from 'recharts';
-import { X, BarChart3, Pencil, Save, Plus, Trash2, RefreshCw, GripHorizontal } from 'lucide-react';
+import { X, BarChart3, Pencil, Save, Plus, Trash2, RefreshCw, GripHorizontal, ExternalLink } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 
@@ -61,82 +61,66 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
         }
 
         try {
-            // Use the configured webhook or default to the one in the proxy if empty but interval is set?
-            // Actually, if it's empty, maybe we shouldn't fetch unless we rely on a default.
-            // But the user gave a specific one, I'll assume if they set an interval, they want to use the proxy.
-            const endpoint = widget.webhookEndpoint || 'http://agile.sprout.ph/automations/webhook/049a56fd-7cf2-46b6-abe9-b24d41ecc092/chat';
+            // Only refresh if we have a pinned data source.
+            // Without one, we'd be re-prompting the AI blind = hallucinations.
+            if (!widget.source_pointer) {
+                setError('No data source linked. Re-prompt this chart with the updated extension to enable refresh.');
+                setIsLoading(false);
+                return;
+            }
 
-            // Validate endpoint before fetching if standard fetch is used directly, 
-            // but we use proxy. Proxy handles it.
-
-            const res = await fetch('/api/proxy', {
+            console.log('[DynamicChart] Using pinned source for refresh...');
+            const refreshRes = await fetch('/api/refresh', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    endpoint: endpoint,
-                    id: widget.id,
-                    title: widget.title,
-                    type: widget.chartType,
-                })
+                body: JSON.stringify({ widgetId: widget.id })
             });
 
-            if (!res.ok) {
-                // Safely parse JSON error, fallback if the server returned raw text or HTML (like a 502 Bad Gateway)
-                let errData: any = {};
-                try {
-                    errData = await res.json();
-                } catch {
-                    errData = { error: res.statusText };
-                }
-                throw new Error(errData?.error || `Error ${res.status}: Failed to fetch data`);
+            if (!refreshRes.ok) {
+                throw new Error(`Refresh request failed: ${refreshRes.status}`);
             }
 
-            const responseData = await res.json();
+            const refreshData = await refreshRes.json();
 
-            // Expecting { data: [...] } or just [...]
-            const newData = responseData.data || responseData;
+            if (refreshData.fallback) {
+                // The DB doesn't have the pointer yet (e.g. widget is old/pre-pointer)
+                setError('No data source saved yet. Re-prompt to link a source.');
+                setIsLoading(false);
+                return;
+            }
+
+            const newData = Array.isArray(refreshData) ? refreshData : (refreshData.data || []);
 
             if (Array.isArray(newData) && newData.length > 0) {
-                // VERY IMPORTANT: The original widget data schema is the STRICTEST source of truth.
-                // Since the LLM occasionally hallucinates extra categories (e.g. inventing a 'Sprint 4'), 
-                // we rigorously mask the incoming newData against the current data structure.
-
                 const currentSchema = Array.isArray(widget.data) ? widget.data : [];
-
-                if (currentSchema.length > 0) {
-                    const striclyMaskedData = currentSchema.map((originalPoint: any) => {
-                        // Attempt to find a matching data point from the LLM's new response
-                        const matchingNewPoint = newData.find((n: any) =>
-                            n.name && originalPoint.name && n.name.toString().toLowerCase() === originalPoint.name.toString().toLowerCase()
+                const maskedData = currentSchema.length > 0
+                    ? currentSchema.map((originalPoint: any, index: number) => {
+                        const byName = newData.find((n: any) =>
+                            n.name && originalPoint.name &&
+                            n.name.toString().toLowerCase() === originalPoint.name.toString().toLowerCase()
                         );
-
+                        const byIndex = newData[index];
+                        const resolved = byName || byIndex;
                         return {
                             ...originalPoint,
-                            value: matchingNewPoint && matchingNewPoint.value !== undefined
-                                ? matchingNewPoint.value
-                                : originalPoint.value // Fallback to current if missing
+                            value: resolved?.value !== undefined ? resolved.value : originalPoint.value
                         };
-                    });
+                    })
+                    : newData;
 
-                    updateDynamicWidget(widget.id, { data: striclyMaskedData });
-                    setDataRows(striclyMaskedData);
-                } else {
-                    // Start of life - widget has no data, so accept the initial configuration
-                    updateDynamicWidget(widget.id, { data: newData });
-                    setDataRows(newData);
-                }
-
+                updateDynamicWidget(widget.id, { data: maskedData, source_pointer: widget.source_pointer });
+                setDataRows(maskedData);
                 setError(null);
-            } else if (Array.isArray(newData) && newData.length === 0) {
-                // Empty array returned
-                setError("No data found from source");
+                console.log('[DynamicChart] Source-pinned refresh succeeded.');
             } else {
-                // Invalid format
-                setError("Invalid data format received");
+                setError('No data returned from source');
             }
+            setIsLoading(false);
+            return;
+
         } catch (e: any) {
-            console.error("Auto-refresh error:", e);
-            setError(e.message || "No data source found");
+            console.error("Refresh error:", e);
+            setError(e.message || "Refresh failed");
         } finally {
             setIsLoading(false);
         }
@@ -576,6 +560,22 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                     </div>
                 )}
                 {renderChart()}
+                {widget.source_pointer && (
+                    <div className="mt-4 pt-2 border-t flex items-center">
+                        <a
+                            href={widget.source_pointer.source_system.toLowerCase() === 'gsheets'
+                                ? `https://docs.google.com/spreadsheets/d/${widget.source_pointer.source_id}`
+                                : `https://${widget.source_pointer.source_id}.atlassian.net/browse/${widget.source_pointer.source_cell}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-blue-600 transition-colors"
+                            title="View Source Data"
+                        >
+                            <ExternalLink className="h-3 w-3" />
+                            <span>Source: {widget.source_pointer.source_system} ({widget.source_pointer.key})</span>
+                        </a>
+                    </div>
+                )}
             </CardContent>
 
             <ConfirmDialog

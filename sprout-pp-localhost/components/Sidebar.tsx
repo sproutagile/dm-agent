@@ -87,9 +87,9 @@ export function Sidebar({ onClose }: SidebarProps) {
             // Call real AI service
             const { reply, data } = await sendMessageToAI(content)
 
-            // Dispatch event if chart data is present
-            if (data && (data.type === 'chart' || data.chartType)) {
-                console.log("Dispatching sprout-widget-data event", data)
+            // Dispatch event if widget data is present (chart OR scorecard)
+            if (data && (data.type === 'chart' || data.chartType || data.type === 'scorecard' || data.type === 'kpi')) {
+                console.log('[Sprout Sidebar] Dispatching widget data. source_pointer:', data.source_pointer || 'NONE')
 
                 // Method 1: Custom Event (works if in same context)
                 const event = new CustomEvent('sprout-widget-data', {

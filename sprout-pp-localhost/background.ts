@@ -52,14 +52,24 @@ async function handleSend({ text, sessionId }: { text: string, sessionId: string
       "type": "chart" | "scorecard" | "table" | "text",
       "chartType": "bar" | "line" | "area" | "pie",
       "title": "Title of the widget",
-      "data": ... // Structure depends on type
+      "data": ... // Structure depends on type,
+      "source": {
+        "system": "GSheets" | "Jira",
+        "spreadsheet_id": "<the google sheets file ID from the URL>",
+        "tab": "<the sheet/tab name>",
+        "range": "<cell or range, e.g. B2 or A1:B10>",
+        "key": "<slug_style_metric_name>"
+      }
     }
+    
+    CRITICAL: The "source" field is MANDATORY for chart and scorecard responses. Always include the exact spreadsheet ID, tab name, and cell/range where the data comes from.
     
     Stats/Scorecard Example:
     {
       "type": "scorecard",
       "title": "Avg Lead Time",
-      "data": { "title": "Avg Lead Time", "value": "12 days", "trend": { "value": "10%", "direction": "down" }, "icon": "time" }
+      "data": { "title": "Avg Lead Time", "value": "12 days", "trend": { "value": "10%", "direction": "down" }, "icon": "time" },
+      "source": { "system": "GSheets", "spreadsheet_id": "1abc...", "tab": "Q1_Report", "range": "B4", "key": "avg_lead_time" }
     }
 
     Table Example:
@@ -74,10 +84,11 @@ async function handleSend({ text, sessionId }: { text: string, sessionId: string
       "type": "chart",
       "chartType": "bar",
       "title": "Velocity",
-      "data": [ { "name": "Sprint 1", "value": 10 } ]
+      "data": [ { "name": "Sprint 1", "value": 10 } ],
+      "source": { "system": "GSheets", "spreadsheet_id": "1abc...", "tab": "Velocity", "range": "A1:B5", "key": "velocity" }
     }
     
-    If just text, use "type": "text" and omit "data".
+    If just text, use "type": "text" and omit "data" and "source".
     )`
 
     return await callN8nWebhook(webhookUrl, enrichedText, sessionId)
@@ -107,6 +118,28 @@ async function callN8nWebhook(webhookUrl: string, text: string, sessionId: strin
 
         // Parse the potential JSON in the reply
         const parsedResponse = cleanAndParseJSON(rawReply)
+
+        // PRIMARY: Read source info from the structured JSON field (much more reliable than text parsing)
+        if (parsedResponse.source && parsedResponse.source.spreadsheet_id) {
+            parsedResponse.source_pointer = {
+                source_system: parsedResponse.source.system || 'GSheets',
+                source_id: parsedResponse.source.spreadsheet_id,
+                source_tab: parsedResponse.source.tab || '',
+                source_cell: parsedResponse.source.range || parsedResponse.source.cell || '',
+                key: parsedResponse.source.key || parsedResponse.title?.toLowerCase().replace(/\s+/g, '_') || 'metric'
+            }
+            console.log('[Sprout Extension] Source Pointer from JSON:', JSON.stringify(parsedResponse.source_pointer))
+        } else {
+            // FALLBACK: Try regex parsing from raw text (legacy [SOURCE: ...] format)
+            const sourcePointer = extractSourcePointer(rawReply)
+            if (sourcePointer) {
+                parsedResponse.source_pointer = sourcePointer
+                console.log('[Sprout Extension] Source Pointer from text regex:', JSON.stringify(sourcePointer))
+            } else {
+                console.log('[Sprout Extension] No source pointer found in response.')
+            }
+        }
+
         console.log('[Sprout Extension] Parsed Response:', JSON.stringify(parsedResponse, null, 2))
 
         return {
@@ -134,6 +167,23 @@ function extractReply(data: any): string {
         return first.output || first.text || first.message || first.reply || JSON.stringify(first)
     }
     return data.output || data.text || data.message || data.reply || JSON.stringify(data)
+}
+
+/**
+ * Extract [SOURCE: ...] data pointer from AI response text.
+ * Returns a structured object if found, null otherwise.
+ */
+function extractSourcePointer(text: string): object | null {
+    const pointerRegex = /\[SOURCE:\s*(.*?)\s*\|\s*ID:\s*(.*?)\s*\|\s*TAB:\s*(.*?)\s*\|\s*CELL:\s*(.*?)\s*\|\s*KEY:\s*(.*?)\]/
+    const match = text.match(pointerRegex)
+    if (!match) return null
+    return {
+        source_system: match[1].trim(),
+        source_id: match[2].trim(),
+        source_tab: match[3].trim(),
+        source_cell: match[4].trim(),
+        key: match[5].trim()
+    }
 }
 
 /**

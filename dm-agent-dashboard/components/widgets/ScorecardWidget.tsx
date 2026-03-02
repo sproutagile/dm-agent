@@ -1,9 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingDown, TrendingUp, GripHorizontal } from "lucide-react";
+import { TrendingDown, TrendingUp, GripHorizontal, ExternalLink } from "lucide-react";
 
 interface ScorecardWidgetProps {
     title: string;
-    value: string;
+    value: any;
     trend?: {
         value: string;
         direction: "up" | "down";
@@ -11,8 +11,26 @@ interface ScorecardWidgetProps {
 }
 
 export function ScorecardWidget({ title, value, trend }: ScorecardWidgetProps) {
+    // Extract primitive value if the source metric is a complex Data Pointer object
+    const displayValue = typeof value === 'object' && value !== null && 'value' in value
+        ? value.value
+        : value;
+
+    const pointer = typeof value === 'object' && value !== null ? value.source_pointer : null;
+
+    const getSourceLink = () => {
+        if (!pointer) return '#';
+        if (pointer.source_system.toLowerCase() === 'gsheets') {
+            return `https://docs.google.com/spreadsheets/d/${pointer.source_id}`;
+        }
+        if (pointer.source_system.toLowerCase() === 'jira') {
+            return `https://${pointer.source_id}.atlassian.net/browse/${pointer.source_cell}`; // Rough guess, Jira URLs vary
+        }
+        return '#';
+    };
+
     return (
-        <Card className="h-full flex flex-col">
+        <Card className="h-full flex flex-col relative group">
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                     <div className="drag-handle cursor-move -ml-2">
@@ -21,8 +39,8 @@ export function ScorecardWidget({ title, value, trend }: ScorecardWidgetProps) {
                     {title}
                 </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 flex flex-col justify-center">
-                <div className="text-3xl font-bold text-foreground mb-1">{value}</div>
+            <CardContent className="flex-1 flex flex-col justify-center relative">
+                <div className="text-3xl font-bold text-foreground mb-1">{displayValue}</div>
                 {trend && (
                     <div className={`flex items-center gap-1 text-xs ${trend.direction === "down" ? "text-[#22C558]" : "text-red-600"
                         }`}>
@@ -33,6 +51,19 @@ export function ScorecardWidget({ title, value, trend }: ScorecardWidgetProps) {
                         )}
                         <span>{trend.value}</span>
                     </div>
+                )}
+
+                {pointer && (
+                    <a
+                        href={getSourceLink()}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-blue-600 mt-2 transition-colors w-fit"
+                        title="View Source Data"
+                    >
+                        <ExternalLink className="h-3 w-3" />
+                        <span>Source: {pointer.source_system}</span>
+                    </a>
                 )}
             </CardContent>
         </Card>

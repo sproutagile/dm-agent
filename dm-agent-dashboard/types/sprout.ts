@@ -18,6 +18,15 @@ export interface Widget {
     refreshInterval?: number;
     webhookEndpoint?: string;
     chartContext?: string;
+
+    // AI Source Data Pointer
+    source_pointer?: {
+        source_system: string;
+        source_id: string;
+        source_tab: string;
+        source_cell: string;
+        key: string;
+    };
 }
 
 export interface ChatMessage {
