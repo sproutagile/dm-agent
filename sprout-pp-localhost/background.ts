@@ -1,6 +1,6 @@
 // Background service worker for handling extension icon clicks and API requests
 
-const DEFAULT_WEBHOOK_URL = "http://agile.sprout.ph/automations/webhook/049a56fd-7cf2-46b6-abe9-b24d41ecc092/chat"
+const DEFAULT_WEBHOOK_URL = "http://agile.sprout.ph/automations/webhook/e7f53dfc-1fb6-4906-abee-62a31c557f90/chat"
 // Using localhost for testing
 const DASHBOARD_API_URL = "http://localhost:3000/api/chat"
 const ENABLE_DASHBOARD_SYNC = false // Disabled for standalone mode
@@ -44,8 +44,9 @@ async function handleSend({ text, sessionId }: { text: string, sessionId: string
     console.log('[Sprout Extension] Standalone Mode - calling webhook:', webhookUrl)
 
     // Inject system instruction to ensure JSON output
-    const enrichedText = `${text}\n\n(IMPORTANT: You act as a data-aware assistant. You MUST output your response in valid JSON format ONLY. Do not wrap in markdown code blocks if possible, but if you do, I will parse it.
+    const enrichedText = `${text}\n\n(IMPORTANT: You act as a data-aware assistant. You MUST output your response in valid JSON format ONLY. 
     
+    CRITICAL INSTRUCTION: DO NOT output any step-by-step reasoning, calculations, preamble, or conversational text. Your ENTIRE response MUST be raw JSON and NOTHING ELSE. If you need to "think" or calculate, do it silently and ONLY output the final JSON result. Do not wrap in markdown code blocks if possible, but if you do, I will parse it.
     Schema:
     {
       "message": "Your text response here...",
@@ -188,25 +189,38 @@ function extractSourcePointer(text: string): object | null {
 
 /**
  * Robust JSON Parser
- * Handles potential Markdown wrapping (```json ... ```)
+ * Handles verbose Model output by aggressively searching for Markdown JSON blocks First
  */
 function cleanAndParseJSON(text: string): any {
+    // 1. Aggressively try extracting from markdown code blocks first (Bypasses chain-of-thought)
+    const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/```\s*([\s\S]*?)\s*```/)
+
+    if (jsonMatch) {
+        try {
+            return JSON.parse(jsonMatch[1].trim())
+        } catch (e) {
+            console.warn('[Sprout Extension] Failed to parse JSON from extracted code block', e)
+        }
+    }
+
+    // 2. Try parsing strictly if no block was found
     try {
-        // 1. Try parsing strictly first
         return JSON.parse(text)
     } catch (e) {
-        // 2. Try extracting from markdown code blocks
-        const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/```\s*([\s\S]*?)\s*```/)
+        // 3. Fallback: Aggressively search for raw JSON structures in messy text
+        const objStart = text.indexOf('{')
+        const objEnd = text.lastIndexOf('}')
 
-        if (jsonMatch) {
+        if (objStart !== -1 && objEnd > objStart) {
             try {
-                return JSON.parse(jsonMatch[1])
-            } catch (e2) {
-                console.warn('Failed to parse JSON from code block', e2)
+                return JSON.parse(text.substring(objStart, objEnd + 1))
+            } catch (fallbackError) {
+                console.warn('[Sprout Extension] Failed aggressive raw json extraction', fallbackError)
             }
         }
 
-        // 3. Fallback: Treat as simple text response
+        // 4. Ultimate Fallback: Treat as simple text response
+        console.warn('[Sprout Extension] Fallback text response triggered')
         return {
             type: 'text',
             message: text

@@ -68,6 +68,7 @@ export function ChartPreview({ data }: ChartPreviewProps) {
                         <Line
                             type="monotone"
                             dataKey="value"
+                            name={data.title}
                             stroke={mainColor}
                             strokeWidth={2}
                             dot={{ r: 2, fill: mainColor }}
@@ -107,6 +108,7 @@ export function ChartPreview({ data }: ChartPreviewProps) {
                         <Area
                             type="monotone"
                             dataKey="value"
+                            name={data.title}
                             stroke={mainColor}
                             fill={mainColor}
                             fillOpacity={0.3}
@@ -172,6 +174,7 @@ export function ChartPreview({ data }: ChartPreviewProps) {
                         <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '4px' }} />
                         <Bar
                             dataKey="value"
+                            name={data.title}
                             fill={mainColor}
                             radius={[4, 4, 0, 0]}
                             maxBarSize={40}
