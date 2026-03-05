@@ -47,9 +47,12 @@ async function handleSend({ text, sessionId }: { text: string, sessionId: string
     const enrichedText = `${text}\n\n(IMPORTANT: You act as a data-aware assistant. You MUST output your response in valid JSON format ONLY. 
     
     CRITICAL INSTRUCTION: DO NOT output any step-by-step reasoning, calculations, preamble, or conversational text. Your ENTIRE response MUST be raw JSON and NOTHING ELSE. If you need to "think" or calculate, do it silently and ONLY output the final JSON result. Do not wrap in markdown code blocks if possible, but if you do, I will parse it.
+    
+    EXPLANATION REQUIREMENT: When returning a chart, scorecard, or table, you MUST provide at least 2 sentences of explanation or insights about the data inside the "message" field of the JSON. Do NOT leave the "message" field empty.
+    
     Schema:
     {
-      "message": "Your text response here...",
+      "message": "Write at least 2 sentences of explanation here...",
       "type": "chart" | "scorecard" | "table" | "text",
       "chartType": "bar" | "line" | "area" | "pie",
       "title": "Title of the widget",
@@ -207,15 +210,63 @@ function cleanAndParseJSON(text: string): any {
     try {
         return JSON.parse(text)
     } catch (e) {
-        // 3. Fallback: Aggressively search for raw JSON structures in messy text
-        const objStart = text.indexOf('{')
-        const objEnd = text.lastIndexOf('}')
+        // 3. Fallback: Extract valid JSON objects from the text safely using brace matching
+        const matches: { start: number; end: number; str: string }[] = [];
+        let searchIndex = 0;
 
-        if (objStart !== -1 && objEnd > objStart) {
+        while (searchIndex < text.length) {
+            let startIndex = text.indexOf('{', searchIndex);
+            if (startIndex === -1) break;
+
+            let braceCount = 0;
+            let inString = false;
+            let escapeNext = false;
+
+            for (let i = startIndex; i < text.length; i++) {
+                const char = text[i];
+                if (escapeNext) {
+                    escapeNext = false;
+                    continue;
+                }
+                if (char === '\\') {
+                    escapeNext = true;
+                    continue;
+                }
+                if (char === '"') {
+                    inString = !inString;
+                } else if (!inString) {
+                    if (char === '{') braceCount++;
+                    else if (char === '}') braceCount--;
+                }
+                if (braceCount === 0 && !inString) {
+                    matches.push({ start: startIndex, end: i, str: text.substring(startIndex, i + 1) });
+                    break;
+                }
+            }
+            // Always advance to find all possible starting braces, including nested or sibling objects
+            searchIndex = startIndex + 1;
+        }
+
+        let validMatches: { parsed: any; start: number; end: number }[] = [];
+        for (const m of matches) {
             try {
-                return JSON.parse(text.substring(objStart, objEnd + 1))
-            } catch (fallbackError) {
-                console.warn('[Sprout Extension] Failed aggressive raw json extraction', fallbackError)
+                const parsed = JSON.parse(m.str);
+                if (parsed && typeof parsed === 'object') {
+                    validMatches.push({ parsed, start: m.start, end: m.end });
+                }
+            } catch (e2) { }
+        }
+
+        if (validMatches.length > 0) {
+            // Filter out nested matches
+            validMatches = validMatches.filter(m1 => {
+                const isInsideAnother = validMatches.some(m2 => m1 !== m2 && m2.start <= m1.start && m2.end >= m1.end);
+                return !isInsideAnother;
+            });
+
+            if (validMatches.length > 0) {
+                // Return the last valid outermost JSON block
+                return validMatches[validMatches.length - 1].parsed;
             }
         }
 

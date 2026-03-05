@@ -1,6 +1,6 @@
 // Background service worker for handling extension icon clicks and API requests
 
-const DEFAULT_WEBHOOK_URL = "http://agile.sprout.ph/automations/webhook/049a56fd-7cf2-46b6-abe9-b24d41ecc092/chat"
+const DEFAULT_WEBHOOK_URL = "http://agile.sprout.ph/automations/webhook/e7f53dfc-1fb6-4906-abee-62a31c557f90/chat"
 const DASHBOARD_API_URL = "https://agile.sprout.ph/api/chat"
 const ENABLE_DASHBOARD_SYNC = false // Disabled for standalone mode
 
@@ -45,9 +45,11 @@ async function handleSend({ text, sessionId }: { text: string, sessionId: string
     // Inject system instruction to ensure JSON output
     const enrichedText = `${text}\n\n(IMPORTANT: You act as a data-aware assistant. You MUST output your response in valid JSON format ONLY. Do not wrap in markdown code blocks if possible, but if you do, I will parse it.
     
+    EXPLANATION REQUIREMENT: When returning a chart, scorecard, or table, you MUST provide at least 2 sentences of explanation or insights about the data inside the "message" field of the JSON. Do NOT leave the "message" field empty.
+    
     Schema:
     {
-      "message": "Your text response here...",
+      "message": "Write at least 2 sentences of explanation here...",
       "type": "chart" | "scorecard" | "table" | "text",
       "chartType": "bar" | "line" | "area" | "pie",
       "title": "Title of the widget",
@@ -187,25 +189,86 @@ function extractSourcePointer(text: string): object | null {
 
 /**
  * Robust JSON Parser
- * Handles potential Markdown wrapping (```json ... ```)
+ * Handles verbose Model output by aggressively searching for Markdown JSON blocks First
  */
 function cleanAndParseJSON(text: string): any {
+    // 1. Aggressively try extracting from markdown code blocks first (Bypasses chain-of-thought)
+    const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/```\s*([\s\S]*?)\s*```/)
+
+    if (jsonMatch) {
+        try {
+            return JSON.parse(jsonMatch[1].trim())
+        } catch (e) {
+            console.warn('[Sprout Extension] Failed to parse JSON from extracted code block', e)
+        }
+    }
+
+    // 2. Try parsing strictly if no block was found
     try {
-        // 1. Try parsing strictly first
         return JSON.parse(text)
     } catch (e) {
-        // 2. Try extracting from markdown code blocks
-        const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/```\s*([\s\S]*?)\s*```/)
+        // 3. Fallback: Extract valid JSON objects from the text safely using brace matching
+        const matches: { start: number; end: number; str: string }[] = [];
+        let searchIndex = 0;
 
-        if (jsonMatch) {
+        while (searchIndex < text.length) {
+            let startIndex = text.indexOf('{', searchIndex);
+            if (startIndex === -1) break;
+
+            let braceCount = 0;
+            let inString = false;
+            let escapeNext = false;
+
+            for (let i = startIndex; i < text.length; i++) {
+                const char = text[i];
+                if (escapeNext) {
+                    escapeNext = false;
+                    continue;
+                }
+                if (char === '\\') {
+                    escapeNext = true;
+                    continue;
+                }
+                if (char === '"') {
+                    inString = !inString;
+                } else if (!inString) {
+                    if (char === '{') braceCount++;
+                    else if (char === '}') braceCount--;
+                }
+                if (braceCount === 0 && !inString) {
+                    matches.push({ start: startIndex, end: i, str: text.substring(startIndex, i + 1) });
+                    break;
+                }
+            }
+            // Always advance to find all possible starting braces, including nested or sibling objects
+            searchIndex = startIndex + 1;
+        }
+
+        let validMatches: { parsed: any; start: number; end: number }[] = [];
+        for (const m of matches) {
             try {
-                return JSON.parse(jsonMatch[1])
-            } catch (e2) {
-                console.warn('Failed to parse JSON from code block', e2)
+                const parsed = JSON.parse(m.str);
+                if (parsed && typeof parsed === 'object') {
+                    validMatches.push({ parsed, start: m.start, end: m.end });
+                }
+            } catch (e2) { }
+        }
+
+        if (validMatches.length > 0) {
+            // Filter out nested matches
+            validMatches = validMatches.filter(m1 => {
+                const isInsideAnother = validMatches.some(m2 => m1 !== m2 && m2.start <= m1.start && m2.end >= m1.end);
+                return !isInsideAnother;
+            });
+
+            if (validMatches.length > 0) {
+                // Return the last valid outermost JSON block
+                return validMatches[validMatches.length - 1].parsed;
             }
         }
 
-        // 3. Fallback: Treat as simple text response
+        // 4. Ultimate Fallback: Treat as simple text response
+        console.warn('[Sprout Extension] Fallback text response triggered')
         return {
             type: 'text',
             message: text
