@@ -257,7 +257,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         const dashboard = dashboards.find(d => d.id === dashboardId);
         if (!dashboard || dashboard.graphs.includes(graphId)) return;
 
-        const newGraphs = [...dashboard.graphs, graphId];
+        const newGraphs = [graphId, ...dashboard.graphs];
         setDashboards((prev) =>
             prev.map((d) => (d.id === dashboardId ? { ...d, graphs: newGraphs } : d))
         );
