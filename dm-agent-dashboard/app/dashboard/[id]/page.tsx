@@ -6,9 +6,12 @@ import { useState } from "react";
 import { Globe } from "lucide-react";
 import { ShareDashboardButton } from "@/components/dashboard/ShareDashboardButton";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import 'react-grid-layout/css/styles.css';
-// @ts-ignore
-import { Responsive, WidthProvider } from 'react-grid-layout';
+import dynamic from 'next/dynamic';
+
+const DashboardGrid = dynamic(
+    () => import('@/components/dashboard/DashboardGrid').then(m => ({ default: m.DashboardGrid })),
+    { ssr: false, loading: () => <div className="p-8 text-center text-muted-foreground">Loading...</div> }
+);
 
 // Widget Components
 import { ScorecardWidget } from "@/components/widgets/ScorecardWidget";
@@ -21,8 +24,6 @@ import { WorkflowEfficiencyChart } from "@/components/charts/WorkflowEfficiencyC
 import { WIDGET_LIBRARY } from "@/data/mockMetrics";
 import { DynamicChart } from "@/components/sprout/DynamicChart";
 import { ExportActions } from "@/components/dashboard/ExportActions";
-
-const ResponsiveGridLayout = WidthProvider(Responsive);
 
 const WIDGET_COMPONENTS: Record<string, React.FC<any>> = {
     VelocityTrendChart,
@@ -52,29 +53,25 @@ export default function DashboardPage() {
         removeGraphFromDashboard(dashboardId, graphId);
     };
 
-    // Helper: determine if a widget is a scorecard type
-    const isScorecard = (graphId: string) => {
-        const dynW = dynamicWidgets[graphId];
-        return (dynW?.type as string) === 'scorecard' || (dynW?.type as string) === 'kpi';
-    };
-
-    // Build react-grid-layout layout: scorecards h=1 (160px), charts h=2 (320px)
+    // Build layout for react-grid-layout — scorecards h=1 (160px), charts h=2 (320px)
     const buildLayout = () => {
         return dashboard.graphs.map((graphId, i) => {
             const existing = (dashboard.layout || []).find((l: any) => l.i === graphId);
             if (existing) return existing;
-            const sc = isScorecard(graphId);
+            const dynW = dynamicWidgets[graphId];
+            const isSc = (dynW?.type as string) === 'scorecard' || (dynW?.type as string) === 'kpi';
             return {
                 i: graphId,
                 x: (i * 2) % 6,
-                y: Math.floor(i / 3) * 2,
+                y: Math.floor(i / 3) * 4,
                 w: 2,
-                h: sc ? 1 : 2,
-                minW: 2,
-                minH: sc ? 1 : 2,
+                h: isSc ? 1 : 2,
+                minW: 1,
+                minH: 1,
             };
         });
     };
+
 
     // If no graphs, show empty state
     if (dashboard.graphs.length === 0) {
@@ -129,26 +126,19 @@ export default function DashboardPage() {
             </div>
 
             {/* Dashboard Content */}
-            <div id="dashboard-content" className="p-4">
-                <ResponsiveGridLayout
-                    layouts={{ lg: buildLayout() }}
-                    breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-                    cols={{ lg: 6, md: 4, sm: 2, xs: 2, xxs: 2 }}
+            <div id="dashboard-content" className="px-4 pb-4">
+                <DashboardGrid
+                    layout={buildLayout()}
+                    onLayoutChange={(layout) => updateDashboardLayout(dashboardId, layout)}
                     rowHeight={160}
+                    cols={6}
                     margin={[8, 8]}
-                    containerPadding={[0, 0]}
-                    onLayoutChange={(layout: any[]) => updateDashboardLayout(dashboardId, layout)}
-                    draggableHandle=".drag-handle"
-                    isDraggable={true}
-                    isResizable={false}
-                    compactType={null}
-                    preventCollision={false}
                 >
                     {dashboard.graphs.map((graphId) => {
                         let WidgetContent: React.ReactNode;
 
                         if (dynamicWidgets[graphId]) {
-                            WidgetContent = <DynamicChart widget={dynamicWidgets[graphId]} onRemove={() => handleRemove(graphId)} />;
+                            WidgetContent = <DynamicChart widget={dynamicWidgets[graphId]} onRemove={() => setWidgetToRemove(graphId)} />;
                         } else {
                             const widget = WIDGET_LIBRARY.find(w => w.id === graphId);
                             if (!widget) return null;
@@ -170,12 +160,12 @@ export default function DashboardPage() {
                         if (!WidgetContent) return null;
 
                         return (
-                            <div key={graphId} className="relative group">
+                            <div key={graphId} className="relative group h-full">
                                 {WidgetContent}
                             </div>
                         );
                     })}
-                </ResponsiveGridLayout>
+                </DashboardGrid>
             </div>
 
             <ConfirmDialog

@@ -192,7 +192,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                 ? (chartData as any).trend as { value: string; direction: 'up' | 'down' }
                 : undefined;
             return (
-                <div className="flex flex-col justify-center h-full px-2 pt-2 pb-4">
+                <div className="flex flex-col justify-center px-2 pt-2 pb-4">
                     <div className="text-3xl font-bold text-foreground mb-1">
                         {rawValue != null ? String(rawValue) : '—'}
                     </div>
@@ -420,6 +420,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                                 <option value="line">Line Chart</option>
                                 <option value="area">Area Chart</option>
                                 <option value="pie">Pie Chart</option>
+                                <option value="scorecard">Scorecard</option>
                             </select>
                         </div>
                     </div>
