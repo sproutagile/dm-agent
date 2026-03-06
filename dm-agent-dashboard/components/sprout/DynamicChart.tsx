@@ -192,15 +192,15 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                 ? (chartData as any).trend as { value: string; direction: 'up' | 'down' }
                 : undefined;
             return (
-                <div className="flex flex-col justify-center px-2 pt-2 pb-4">
-                    <div className="text-3xl font-bold text-foreground mb-1">
+                <div className="flex flex-col items-start justify-center h-full px-1 py-2">
+                    <div className="text-4xl font-bold text-gray-900 tracking-tight mb-2">
                         {rawValue != null ? String(rawValue) : '—'}
                     </div>
                     {trend && (
-                        <div className={`flex items-center gap-1 text-xs ${trend.direction === 'down' ? 'text-green-600' : 'text-red-600'}`}>
+                        <div className={`flex items-center gap-1 text-sm font-medium ${trend.direction === 'down' ? 'text-green-600' : 'text-red-500'}`}>
                             {trend.direction === 'down'
-                                ? <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6" /><polyline points="17 18 23 18 23 12" /></svg>
-                                : <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg>
+                                ? <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6" /><polyline points="17 18 23 18 23 12" /></svg>
+                                : <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg>
                             }
                             <span>{trend.value}</span>
                         </div>
@@ -569,41 +569,34 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                     >
                         <Pencil className="h-4 w-4" />
                     </button>
-                    {onRemove && (
-                        <button
-                            onClick={() => setIsWidgetDeleteConfirmOpen(true)}
-                            className="p-1 rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-red-600"
-                            title="Remove Widget"
-                        >
-                            <X className="h-4 w-4" />
-                        </button>
-                    )}
                 </div>
             </CardHeader>
-            <CardContent className="flex-1 min-h-0">
+            <CardContent className="flex-1 min-h-0 flex flex-col justify-center">
                 {isLoading && (
                     <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                     </div>
                 )}
                 {renderChart()}
-                {widget.source_pointer && (
-                    <div className="mt-4 pt-2 border-t flex items-center">
-                        <a
-                            href={widget.source_pointer.source_system.toLowerCase() === 'gsheets'
-                                ? `https://docs.google.com/spreadsheets/d/${widget.source_pointer.source_id}`
-                                : `https://${widget.source_pointer.source_id}.atlassian.net/browse/${widget.source_pointer.source_cell}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-blue-600 transition-colors"
-                            title="View Source Data"
-                        >
-                            <ExternalLink className="h-3 w-3" />
-                            <span>Source: {widget.source_pointer.source_system} ({widget.source_pointer.key})</span>
-                        </a>
-                    </div>
-                )}
             </CardContent>
+
+            {/* Source link pinned to bottom */}
+            {widget.source_pointer && (
+                <div className="px-4 pb-3 pt-2 border-t border-gray-100 flex-shrink-0">
+                    <a
+                        href={widget.source_pointer.source_system.toLowerCase() === 'gsheets'
+                            ? `https://docs.google.com/spreadsheets/d/${widget.source_pointer.source_id}`
+                            : `https://${widget.source_pointer.source_id}.atlassian.net/browse/${widget.source_pointer.source_cell}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-blue-600 transition-colors w-fit"
+                        title="View Source Data"
+                    >
+                        <ExternalLink className="h-3 w-3" />
+                        <span>Source: {widget.source_pointer.source_system} ({widget.source_pointer.key})</span>
+                    </a>
+                </div>
+            )}
 
             <ConfirmDialog
                 isOpen={isWidgetDeleteConfirmOpen}
