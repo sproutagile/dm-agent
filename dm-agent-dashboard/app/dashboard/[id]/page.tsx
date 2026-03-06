@@ -154,7 +154,7 @@ export default function DashboardPage() {
             {/* Dashboard Content - Targeted for PDF Export */}
             <div
                 id="dashboard-content"
-                className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-0 p-1"
+                className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 [grid-auto-rows:160px] [grid-auto-flow:dense] gap-0 p-4"
             >
                 {dashboard.graphs.map((graphId) => {
                     let WidgetContent: React.ReactNode;
@@ -190,18 +190,17 @@ export default function DashboardPage() {
 
                     if (!WidgetContent) return null;
 
-                    // Determine column span and height based on widget type
+                    // Determine col-span and row-span based on widget type
                     const dynW = dynamicWidgets[graphId];
                     const isScorecard = (dynW?.type as string) === 'scorecard' || (dynW?.type as string) === 'kpi';
-                    let colSpanClass = 'col-span-2'; // same width for all
-                    if (dynW?.colSpan === 2) {
-                        colSpanClass = 'col-span-3 md:col-span-4 lg:col-span-3';
-                    } else if (dynW?.colSpan === 3) {
-                        colSpanClass = 'col-span-2 md:col-span-4 lg:col-span-6';
-                    }
-                    // 2 scorecards (160px each) stacked = 320px = 1 regular chart
-                    // gap-0 means no spacing, they tile perfectly
-                    const heightClass = isScorecard ? 'h-[160px]' : 'h-[320px]';
+
+                    // Column span
+                    let colSpanClass = 'col-span-2';
+                    if (dynW?.colSpan === 2) colSpanClass = 'col-span-3 lg:col-span-3';
+                    else if (dynW?.colSpan === 3) colSpanClass = 'col-span-2 lg:col-span-6';
+
+                    // Row span: scorecard = 1 row (160px), chart = 2 rows (320px)
+                    const rowSpanClass = isScorecard ? 'row-span-1' : 'row-span-2';
 
                     return (
                         <div
@@ -212,21 +211,21 @@ export default function DashboardPage() {
                             onDragOver={handleDragOver}
                             onDrop={(e) => handleDrop(e, graphId)}
                             onDragEnd={(e) => handleDragEnd(e, graphId)}
-                            className={`relative group ${heightClass} transition-opacity duration-200 ${colSpanClass}`}
+                            className={`relative group h-full transition-opacity duration-200 ${colSpanClass} ${rowSpanClass} p-2`}
                         >
-                            {/* Remove Button - Hidden during export usually, but html2canvas might capture it if not handled. 
-                                We can use data-html2canvas-ignore attribute to exclude it from PDF. 
-                            */}
+                            {/* Remove Button */}
                             <button
                                 onClick={() => setWidgetToRemove(graphId)}
                                 data-html2canvas-ignore
-                                className="absolute top-2 right-2 z-20 p-1.5 bg-white rounded-lg shadow-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
+                                className="absolute top-3 right-3 z-20 p-1.5 bg-white rounded-lg shadow-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
                             >
                                 <Trash2 className="h-4 w-4 text-red-600" />
                             </button>
 
-                            {/* Widget Content */}
-                            {WidgetContent}
+                            {/* Widget Content — fills the padded cell */}
+                            <div className="h-full w-full">
+                                {WidgetContent}
+                            </div>
                         </div>
                     );
                 })}
