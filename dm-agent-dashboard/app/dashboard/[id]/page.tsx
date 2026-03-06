@@ -161,7 +161,28 @@ export default function DashboardPage() {
 
                     // Check dynamic widgets first
                     if (dynamicWidgets[graphId]) {
-                        WidgetContent = <DynamicChart widget={dynamicWidgets[graphId]} />;
+                        const dynWidget = dynamicWidgets[graphId];
+                        // Scorecards from the extension have type 'scorecard' or 'kpi'
+                        // Their data is a scalar/object, NOT an array — must use ScorecardWidget
+                        if (dynWidget.type === 'scorecard' || dynWidget.type === 'kpi') {
+                            const data = dynWidget.data as any;
+                            // data may be the value directly, or an object { value, trend }
+                            const scorecardValue = typeof data === 'object' && data !== null && 'value' in data
+                                ? data.value
+                                : data;
+                            const scorecardTrend = typeof data === 'object' && data !== null && 'trend' in data
+                                ? data.trend
+                                : undefined;
+                            WidgetContent = (
+                                <ScorecardWidget
+                                    title={dynWidget.title}
+                                    value={scorecardValue}
+                                    trend={scorecardTrend}
+                                />
+                            );
+                        } else {
+                            WidgetContent = <DynamicChart widget={dynWidget} />;
+                        }
                     } else {
                         // Check static library
                         const widget = WIDGET_LIBRARY.find(w => w.id === graphId);
