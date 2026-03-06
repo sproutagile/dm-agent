@@ -90,8 +90,19 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
             }
 
             const newData = Array.isArray(refreshData) ? refreshData : (refreshData.data || []);
+            const isScorecard = (widget.type as string) === 'scorecard' || (widget.type as string) === 'kpi';
 
-            if (Array.isArray(newData) && newData.length > 0) {
+            if (isScorecard) {
+                // For scorecards, grab the first value from the returned array and preserve trend info if any
+                const scalarValue = Array.isArray(newData) && newData.length > 0 ? newData[0].value : newData;
+                const updatedData = typeof widget.data === 'object' && widget.data !== null && !Array.isArray(widget.data)
+                    ? { ...widget.data, value: scalarValue }
+                    : scalarValue;
+
+                updateDynamicWidget(widget.id, { data: updatedData, source_pointer: widget.source_pointer });
+                setError(null);
+                console.log('[DynamicChart] Scorecard refresh succeeded.', scalarValue);
+            } else if (Array.isArray(newData) && newData.length > 0) {
                 const currentSchema = Array.isArray(widget.data) ? widget.data : [];
                 const maskedData = currentSchema.length > 0
                     ? currentSchema.map((originalPoint: any, index: number) => {
