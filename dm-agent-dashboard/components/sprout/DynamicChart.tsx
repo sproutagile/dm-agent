@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Widget } from '@/types/sprout';
 import { useDashboard } from '@/components/DashboardContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
     BarChart,
     Bar,
@@ -34,7 +35,8 @@ const COLORS = ['#2D3A8C', '#2E7D32', '#F5A623', '#02AFCE', '#8952F6'];
 
 export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
     const { updateDynamicWidget, refreshMetrics } = useDashboard();
-    const [isEditing, setIsEditing] = useState(false);
+    const [isEditOpen, setIsEditOpen] = useState(false);
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [editTitle, setEditTitle] = useState(widget.title);
     const [editType, setEditType] = useState(widget.chartType || 'bar');
     const [editColSpan, setEditColSpan] = useState(widget.colSpan || 1);
@@ -151,7 +153,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
             webhookEndpoint: editWebhook,
             refreshInterval: editRefreshInterval
         });
-        setIsEditing(false);
+        setisEditOpen(false);
     };
 
     const handleDataChange = (index: number, field: 'name' | 'value', newValue: string) => {
@@ -169,7 +171,6 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
         setDataRows(newRows);
     };
 
-    // reset state when entering edit mode
     const startEditing = () => {
         setEditTitle(widget.title);
         setEditType(widget.chartType || 'bar');
@@ -177,7 +178,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
         setEditWebhook(widget.webhookEndpoint || '');
         setEditRefreshInterval(widget.refreshInterval || 0);
         setDataRows(Array.isArray(widget.data) ? widget.data : []);
-        setIsEditing(true);
+        setIsEditDialogOpen(true); // open as dialog, not inline
     };
 
     const renderChart = () => {
@@ -194,7 +195,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                 : undefined;
 
             return (
-                <div className="flex flex-col justify-center px-2 py-4 min-h-[120px]">
+                <div className="flex flex-col justify-center px-2 py-4 ">
                     <div className="text-3xl font-bold text-foreground mb-1">
                         {rawValue ?? '—'}
                     </div>
@@ -389,98 +390,134 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
         }
     };
 
-    if (isEditing) {
-        return (
-            <Card className="relative overflow-hidden border-0 shadow-sm bg-white p-4">
-                <div className="space-y-4">
-                    <div className="flex justify-between items-center border-b pb-2">
-                        <h3 className="font-semibold text-lg">Edit Chart</h3>
-                        <button onClick={() => setIsEditing(false)} className="p-1 hover:bg-gray-100 rounded-full">
-                            <X className="h-5 w-5 text-gray-500" />
+
+    return (
+        <>
+            <Card className="relative overflow-hidden border-0 shadow-sm hover:shadow-lg transition-all duration-300 bg-white animate-fadeIn h-full flex flex-col">
+                <CardHeader className="flex flex-row items-center justify-between pb-2 flex-shrink-0">
+                    <div className="flex items-center gap-2">
+                        <div className="drag-handle cursor-move">
+                            <GripHorizontal className="h-5 w-5 text-gray-400 hover:text-gray-600 transition-colors" />
+                        </div>
+                        <div className="p-2 rounded-lg bg-blue-50">
+                            <BarChart3 className="h-4 w-4 text-[#2D3A8C]" />
+                        </div>
+                        <CardTitle className="text-base font-semibold text-gray-900">
+                            {widget.title}
+                        </CardTitle>
+                    </div>
+                    <div className="flex gap-1">
+                        <button
+                            onClick={fetchData}
+                            className={`p-1 rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-blue-600 ${isLoading ? 'animate-spin' : ''}`}
+                            title="Refresh Data"
+                            disabled={isLoading}
+                        >
+                            <RefreshCw className="h-4 w-4" />
                         </button>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Title</label>
-                            <input
-                                className="w-full p-2 border rounded-md text-sm"
-                                value={editTitle}
-                                onChange={(e) => setEditTitle(e.target.value)}
-                                placeholder="Chart Title"
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Chart Type</label>
-                            <select
-                                className="w-full p-2 border rounded-md text-sm"
-                                value={editType}
-                                onChange={(e) => setEditType(e.target.value as any)}
-                            >
-                                <option value="bar">Bar Chart</option>
-                                <option value="line">Line Chart</option>
-                                <option value="area">Area Chart</option>
-                                <option value="pie">Pie Chart</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                            <label className="text-sm font-medium">Data Points</label>
-                            <span className="text-xs text-muted-foreground">Label | Value</span>
-                        </div>
-                        <div className="max-h-60 overflow-y-auto space-y-2 border rounded-md p-2 bg-gray-50">
-                            {dataRows.map((row, index) => (
-                                <div key={index} className="flex gap-2 items-center">
-                                    <input
-                                        className="flex-1 p-2 border rounded-md text-sm"
-                                        placeholder="Label"
-                                        value={row.name || ''}
-                                        onChange={(e) => handleDataChange(index, 'name', e.target.value)}
-                                    />
-                                    <input
-                                        className="w-20 p-2 border rounded-md text-sm"
-                                        placeholder="Value"
-                                        type="number"
-                                        value={row.value || ''}
-                                        onChange={(e) => handleDataChange(index, 'value', e.target.value)}
-                                    />
-                                    <button
-                                        onClick={() => setRowToDelete(index)}
-                                        className="p-2 text-red-500 hover:bg-red-50 rounded-md"
-                                        title="Remove"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </button>
-                                </div>
-                            ))}
+                        <button
+                            onClick={startEditing}
+                            className="p-1 rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-blue-600"
+                            title="Edit Chart"
+                        >
+                            <Pencil className="h-4 w-4" />
+                        </button>
+                        {onRemove && (
                             <button
-                                onClick={handleAddRow}
-                                className="w-full py-2 border-2 border-dashed border-gray-300 rounded-md text-gray-500 hover:border-blue-500 hover:text-blue-600 text-sm flex items-center justify-center gap-2"
+                                onClick={() => setIsWidgetDeleteConfirmOpen(true)}
+                                className="p-1 rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-red-600"
+                                title="Remove Widget"
                             >
-                                <Plus className="h-4 w-4" /> Add Data Point
+                                <X className="h-4 w-4" />
                             </button>
-                        </div>
+                        )}
                     </div>
+                </CardHeader>
+                <CardContent className="flex-1 min-h-0 overflow-auto">
+                    {isLoading && (
+                        <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        </div>
+                    )}
+                    {renderChart()}
+                    {widget.source_pointer && (
+                        <div className="mt-4 pt-2 border-t flex items-center">
+                            <a
+                                href={widget.source_pointer.source_system.toLowerCase() === 'gsheets'
+                                    ? `https://docs.google.com/spreadsheets/d/${widget.source_pointer.source_id}`
+                                    : `https://${widget.source_pointer.source_id}.atlassian.net/browse/${widget.source_pointer.source_cell}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-blue-600 transition-colors"
+                                title="View Source Data"
+                            >
+                                <ExternalLink className="h-3 w-3" />
+                                <span>Source: {widget.source_pointer.source_system} ({widget.source_pointer.key})</span>
+                            </a>
+                        </div>
+                    )}
+                </CardContent>
 
-                    <div className="space-y-2 pt-2 border-t">
-                        <h4 className="text-sm font-medium">Auto-Refresh</h4>
-                        <div className="grid grid-cols-1 gap-2">
-                            {/* Webhook URL Input Removed - Using Default Sprout Webhook */}
+                <ConfirmDialog
+                    isOpen={isWidgetDeleteConfirmOpen}
+                    onOpenChange={setIsWidgetDeleteConfirmOpen}
+                    title="Remove Widget"
+                    description="Are you sure you want to remove this widget?"
+                    confirmText="Remove"
+                    onConfirm={() => {
+                        if (onRemove) {
+                            onRemove(widget.id);
+                            setIsWidgetDeleteConfirmOpen(false);
+                        }
+                    }}
+                />
+            </Card>
 
+            {/* Edit Dialog — floats above all cards, never overlaps grid */}
+            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Edit Chart</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 mt-2">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Title</label>
+                                <input className="w-full p-2 border rounded-md text-sm" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="Chart Title" />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Chart Type</label>
+                                <select className="w-full p-2 border rounded-md text-sm" value={editType} onChange={(e) => setEditType(e.target.value as any)}>
+                                    <option value="bar">Bar Chart</option>
+                                    <option value="line">Line Chart</option>
+                                    <option value="area">Area Chart</option>
+                                    <option value="pie">Pie Chart</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <label className="text-sm font-medium">Data Points</label>
+                                <span className="text-xs text-muted-foreground">Label | Value</span>
+                            </div>
+                            <div className="max-h-52 overflow-y-auto space-y-2 border rounded-md p-2 bg-gray-50">
+                                {dataRows.map((row, index) => (
+                                    <div key={index} className="flex gap-2 items-center">
+                                        <input className="flex-1 p-2 border rounded-md text-sm" placeholder="Label" value={row.name || ''} onChange={(e) => handleDataChange(index, 'name', e.target.value)} />
+                                        <input className="w-20 p-2 border rounded-md text-sm" placeholder="Value" type="number" value={row.value || ''} onChange={(e) => handleDataChange(index, 'value', e.target.value)} />
+                                        <button onClick={() => setRowToDelete(index)} className="p-2 text-red-500 hover:bg-red-50 rounded-md" title="Remove"><Trash2 className="h-4 w-4" /></button>
+                                    </div>
+                                ))}
+                                <button onClick={handleAddRow} className="w-full py-2 border-2 border-dashed border-gray-300 rounded-md text-gray-500 hover:border-blue-500 hover:text-blue-600 text-sm flex items-center justify-center gap-2">
+                                    <Plus className="h-4 w-4" /> Add Data Point
+                                </button>
+                            </div>
+                        </div>
+                        <div className="space-y-2 pt-2 border-t">
+                            <h4 className="text-sm font-medium">Auto-Refresh</h4>
                             <div className="flex items-center gap-2">
                                 <label className="text-sm whitespace-nowrap">Refresh every:</label>
-                                <select
-                                    className="p-2 border rounded-md text-sm flex-1"
-                                    value={editRefreshInterval}
-                                    onChange={(e) => {
-                                        const newVal = Number(e.target.value);
-                                        setEditRefreshInterval(newVal);
-                                        updateDynamicWidget(widget.id, { refreshInterval: newVal });
-                                    }}
-                                >
+                                <select className="p-2 border rounded-md text-sm flex-1" value={editRefreshInterval} onChange={(e) => { const v = Number(e.target.value); setEditRefreshInterval(v); updateDynamicWidget(widget.id, { refreshInterval: v }); }}>
                                     <option value={0}>Disabled</option>
                                     <option value={10000}>10 seconds (Test)</option>
                                     <option value={60000}>1 Minute</option>
@@ -490,135 +527,24 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                                 </select>
                             </div>
                         </div>
-                    </div>
-
-                    <div className="flex justify-end gap-2 pt-2 border-t mt-4">
-                        <div className="flex-1 flex items-center gap-2">
-                            <span className="text-sm font-medium">Width:</span>
-                            <div className="flex gap-1">
-                                {[1, 2, 3].map((span) => (
-                                    <button
-                                        key={span}
-                                        onClick={() => setEditColSpan(span)}
-                                        className={`px-2 py-1 text-xs border rounded ${editColSpan === span ? 'bg-blue-100 border-blue-500 text-blue-700' : 'bg-white text-gray-600 hover:bg-gray-50'
-                                            }`}
-                                    >
-                                        {span === 1 ? 'Regular' : span === 2 ? 'Wide' : 'Full'}
-                                    </button>
-                                ))}
-                            </div>
+                        <div className="flex justify-end gap-2 pt-2 border-t">
+                            <button onClick={() => setIsEditDialogOpen(false)} className="px-4 py-2 text-sm border rounded-md hover:bg-gray-50">Cancel</button>
+                            <button onClick={() => { handleSave(); setIsEditDialogOpen(false); }} className="px-4 py-2 text-sm bg-[#2D3A8C] text-white rounded-md hover:bg-blue-800 flex items-center gap-2 shadow-sm">
+                                <Save className="h-4 w-4" /> Save Changes
+                            </button>
                         </div>
-                        <button
-                            onClick={() => setIsEditing(false)}
-                            className="px-4 py-2 text-sm border rounded-md hover:bg-gray-50"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={handleSave}
-                            className="px-4 py-2 text-sm bg-[#2D3A8C] text-white rounded-md hover:bg-blue-800 flex items-center gap-2 shadow-sm"
-                        >
-                            <Save className="h-4 w-4" /> Save Changes
-                        </button>
                     </div>
-                </div>
-
-                <ConfirmDialog
-                    isOpen={rowToDelete !== null}
-                    onOpenChange={(open) => !open && setRowToDelete(null)}
-                    title="Remove Data Point"
-                    description="Are you sure you want to remove this data point?"
-                    confirmText="Remove"
-                    onConfirm={() => {
-                        if (rowToDelete !== null) {
-                            handleRemoveRow(rowToDelete);
-                            setRowToDelete(null);
-                        }
-                    }}
-                />
-            </Card>
-        );
-    }
-
-    return (
-        <Card className="relative overflow-hidden border-0 shadow-sm hover:shadow-lg transition-all duration-300 bg-white animate-fadeIn h-full flex flex-col">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 flex-shrink-0">
-                <div className="flex items-center gap-2">
-                    <div className="drag-handle cursor-move">
-                        <GripHorizontal className="h-5 w-5 text-gray-400 hover:text-gray-600 transition-colors" />
-                    </div>
-                    <div className="p-2 rounded-lg bg-blue-50">
-                        <BarChart3 className="h-4 w-4 text-[#2D3A8C]" />
-                    </div>
-                    <CardTitle className="text-base font-semibold text-gray-900">
-                        {widget.title}
-                    </CardTitle>
-                </div>
-                <div className="flex gap-1">
-                    <button
-                        onClick={fetchData}
-                        className={`p-1 rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-blue-600 ${isLoading ? 'animate-spin' : ''}`}
-                        title="Refresh Data"
-                        disabled={isLoading}
-                    >
-                        <RefreshCw className="h-4 w-4" />
-                    </button>
-                    <button
-                        onClick={startEditing}
-                        className="p-1 rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-blue-600"
-                        title="Edit Chart"
-                    >
-                        <Pencil className="h-4 w-4" />
-                    </button>
-                    {onRemove && (
-                        <button
-                            onClick={() => setIsWidgetDeleteConfirmOpen(true)}
-                            className="p-1 rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-red-600"
-                            title="Remove Widget"
-                        >
-                            <X className="h-4 w-4" />
-                        </button>
-                    )}
-                </div>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-hidden">
-                {isLoading && (
-                    <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                    </div>
-                )}
-                {renderChart()}
-                {widget.source_pointer && (
-                    <div className="mt-4 pt-2 border-t flex items-center">
-                        <a
-                            href={widget.source_pointer.source_system.toLowerCase() === 'gsheets'
-                                ? `https://docs.google.com/spreadsheets/d/${widget.source_pointer.source_id}`
-                                : `https://${widget.source_pointer.source_id}.atlassian.net/browse/${widget.source_pointer.source_cell}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-blue-600 transition-colors"
-                            title="View Source Data"
-                        >
-                            <ExternalLink className="h-3 w-3" />
-                            <span>Source: {widget.source_pointer.source_system} ({widget.source_pointer.key})</span>
-                        </a>
-                    </div>
-                )}
-            </CardContent>
+                </DialogContent>
+            </Dialog>
 
             <ConfirmDialog
-                isOpen={isWidgetDeleteConfirmOpen}
-                onOpenChange={setIsWidgetDeleteConfirmOpen}
-                title="Remove Widget"
-                description="Are you sure you want to remove this widget?"
+                isOpen={rowToDelete !== null}
+                onOpenChange={(open) => !open && setRowToDelete(null)}
+                title="Remove Data Point"
+                description="Are you sure you want to remove this data point?"
                 confirmText="Remove"
-                onConfirm={() => {
-                    if (onRemove) {
-                        onRemove(widget.id);
-                        setIsWidgetDeleteConfirmOpen(false);
-                    }
-                }}
+                onConfirm={() => { if (rowToDelete !== null) { handleRemoveRow(rowToDelete); setRowToDelete(null); } }}
             />
-        </Card>
+        </>
     );
 }
