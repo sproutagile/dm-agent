@@ -541,8 +541,8 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
     }
 
     return (
-        <Card className="relative overflow-hidden border-0 shadow-sm hover:shadow-lg transition-all duration-300 bg-white animate-fadeIn">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <Card className="relative overflow-hidden border-0 shadow-sm hover:shadow-lg transition-all duration-300 bg-white animate-fadeIn h-full flex flex-col">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 flex-shrink-0">
                 <div className="flex items-center gap-2">
                     <div className="drag-handle cursor-move">
                         <GripHorizontal className="h-5 w-5 text-gray-400 hover:text-gray-600 transition-colors" />
@@ -581,7 +581,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                     )}
                 </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 overflow-hidden">
                 {isLoading && (
                     <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
