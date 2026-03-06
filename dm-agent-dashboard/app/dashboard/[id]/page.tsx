@@ -3,15 +3,9 @@
 import { useParams } from "next/navigation";
 import { useDashboard } from "@/components/DashboardContext";
 import { useState } from "react";
-import { Globe } from "lucide-react";
+import { Trash2, Globe } from "lucide-react";
 import { ShareDashboardButton } from "@/components/dashboard/ShareDashboardButton";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import dynamic from 'next/dynamic';
-
-const DashboardGrid = dynamic(
-    () => import('@/components/dashboard/DashboardGrid').then(m => ({ default: m.DashboardGrid })),
-    { ssr: false, loading: () => <div className="p-8 text-center text-muted-foreground">Loading...</div> }
-);
 
 // Widget Components
 import { ScorecardWidget } from "@/components/widgets/ScorecardWidget";
@@ -38,7 +32,7 @@ export default function DashboardPage() {
     const dashboardId = params.id as string;
     const [widgetToRemove, setWidgetToRemove] = useState<string | null>(null);
     const dashboardContext = useDashboard();
-    const { getDashboard, removeGraphFromDashboard, dynamicWidgets, updateDashboardLayout } = dashboardContext;
+    const { getDashboard, removeGraphFromDashboard, dynamicWidgets } = dashboardContext;
     const dashboard = getDashboard(dashboardId);
 
     if (!dashboard) {
@@ -52,26 +46,6 @@ export default function DashboardPage() {
     const handleRemove = (graphId: string) => {
         removeGraphFromDashboard(dashboardId, graphId);
     };
-
-    // Build layout for react-grid-layout — scorecards h=1 (160px), charts h=2 (320px)
-    const buildLayout = () => {
-        return dashboard.graphs.map((graphId, i) => {
-            const existing = (dashboard.layout || []).find((l: any) => l.i === graphId);
-            if (existing) return existing;
-            const dynW = dynamicWidgets[graphId];
-            const isSc = (dynW?.type as string) === 'scorecard' || (dynW?.type as string) === 'kpi';
-            return {
-                i: graphId,
-                x: (i * 2) % 6,
-                y: Math.floor(i / 3) * 4,
-                w: 2,
-                h: isSc ? 1 : 2,
-                minW: 1,
-                minH: 1,
-            };
-        });
-    };
-
 
     // If no graphs, show empty state
     if (dashboard.graphs.length === 0) {
@@ -126,46 +100,57 @@ export default function DashboardPage() {
             </div>
 
             {/* Dashboard Content */}
-            <div id="dashboard-content" className="px-4 pb-4">
-                <DashboardGrid
-                    layout={buildLayout()}
-                    onLayoutChange={(layout) => updateDashboardLayout(dashboardId, layout)}
-                    rowHeight={160}
-                    cols={6}
-                    margin={[8, 8]}
-                >
-                    {dashboard.graphs.map((graphId) => {
-                        let WidgetContent: React.ReactNode;
+            <div
+                id="dashboard-content"
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-1"
+            >
+                {dashboard.graphs.map((graphId) => {
+                    let WidgetContent: React.ReactNode;
 
-                        if (dynamicWidgets[graphId]) {
-                            WidgetContent = <DynamicChart widget={dynamicWidgets[graphId]} onRemove={() => setWidgetToRemove(graphId)} />;
-                        } else {
-                            const widget = WIDGET_LIBRARY.find(w => w.id === graphId);
-                            if (!widget) return null;
+                    // Check dynamic widgets first
+                    if (dynamicWidgets[graphId]) {
+                        WidgetContent = <DynamicChart widget={dynamicWidgets[graphId]} onRemove={() => handleRemove(graphId)} />;
+                    } else {
+                        const widget = WIDGET_LIBRARY.find(w => w.id === graphId);
+                        if (!widget) return null;
 
-                            if (widget.type === "scorecard") {
-                                const props = widget.props as { title: string; value: string; trend?: { value: string; direction: "up" | "down" } };
-                                const liveMetric = dashboardContext.sourceMetrics && dashboardContext.sourceMetrics[graphId];
-                                if (liveMetric && liveMetric.data) props.value = liveMetric.data;
-                                WidgetContent = <ScorecardWidget {...props} />;
-                            } else if (widget.type === "text") {
-                                const props = widget.props as { title: string; content: string };
-                                WidgetContent = <TextWidget {...props} />;
-                            } else if (widget.type === "chart" && widget.component) {
-                                const ChartComponent = WIDGET_COMPONENTS[widget.component];
-                                if (ChartComponent) WidgetContent = <ChartComponent />;
-                            }
+                        if (widget.type === "scorecard") {
+                            const props = widget.props as { title: string; value: string; trend?: { value: string; direction: "up" | "down" } };
+                            const liveMetric = dashboardContext.sourceMetrics && dashboardContext.sourceMetrics[graphId];
+                            if (liveMetric && liveMetric.data) props.value = liveMetric.data;
+                            WidgetContent = <ScorecardWidget {...props} />;
+                        } else if (widget.type === "text") {
+                            const props = widget.props as { title: string; content: string };
+                            WidgetContent = <TextWidget {...props} />;
+                        } else if (widget.type === "chart" && widget.component) {
+                            const ChartComponent = WIDGET_COMPONENTS[widget.component];
+                            if (ChartComponent) WidgetContent = <ChartComponent />;
                         }
+                    }
 
-                        if (!WidgetContent) return null;
+                    if (!WidgetContent) return null;
 
-                        return (
-                            <div key={graphId} className="relative group h-full">
-                                {WidgetContent}
-                            </div>
-                        );
-                    })}
-                </DashboardGrid>
+                    const dynW = dynamicWidgets[graphId];
+                    let colSpan = 1;
+                    if (dynW?.colSpan) colSpan = dynW.colSpan;
+
+                    return (
+                        <div
+                            id={`widget-${graphId}`}
+                            key={graphId}
+                            className={`relative group min-h-[320px] ${colSpan === 2 ? 'md:col-span-2' : colSpan === 3 ? 'md:col-span-2 lg:col-span-3' : ''}`}
+                        >
+                            <button
+                                onClick={() => setWidgetToRemove(graphId)}
+                                data-html2canvas-ignore
+                                className="absolute top-2 right-2 z-20 p-1.5 bg-white rounded-lg shadow-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
+                            >
+                                <Trash2 className="h-4 w-4 text-red-600" />
+                            </button>
+                            {WidgetContent}
+                        </div>
+                    );
+                })}
             </div>
 
             <ConfirmDialog
