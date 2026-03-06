@@ -36,7 +36,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
     const { updateDynamicWidget, refreshMetrics } = useDashboard();
     const [isEditing, setIsEditing] = useState(false);
     const [editTitle, setEditTitle] = useState(widget.title);
-    const [editType, setEditType] = useState(widget.chartType || 'bar');
+    const [editType, setEditType] = useState<string>(widget.chartType || 'bar');
     const [editColSpan, setEditColSpan] = useState(widget.colSpan || 1);
     const [editWebhook, setEditWebhook] = useState(widget.webhookEndpoint || '');
     const [editRefreshInterval, setEditRefreshInterval] = useState(widget.refreshInterval || 0);
@@ -139,12 +139,17 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
 
     const handleSave = () => {
         // clean up data: convert value to numbers and remove empty rows
-        const cleanData = dataRows
-            .map(row => ({ name: row.name, value: Number(row.value) }))
-            .filter(row => row.name.trim() !== '' && !isNaN(row.value));
+        // For scorecards, skip the number-parse — keep raw data as-is
+        const isScorecard = editType === 'scorecard' || editType === 'kpi';
+        const cleanData = isScorecard
+            ? widget.data  // preserve existing scalar/object data unchanged
+            : dataRows
+                .map(row => ({ name: row.name, value: Number(row.value) }))
+                .filter(row => row.name.trim() !== '' && !isNaN(row.value));
 
         updateDynamicWidget(widget.id, {
             title: editTitle,
+            type: editType,        // ← persists widget.type so renderChart() scorecard check works
             chartType: editType,
             colSpan: editColSpan,
             data: cleanData,
