@@ -253,7 +253,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
         switch (widget.chartType || 'bar') {
             case 'line':
                 return renderWithOverlay(
-                    <ResponsiveContainer width="100%" height={280}>
+                    <ResponsiveContainer width="100%" height={200}>
                         <LineChart data={chartData}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                             <XAxis
@@ -287,7 +287,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
 
             case 'area':
                 return renderWithOverlay(
-                    <ResponsiveContainer width="100%" height={280}>
+                    <ResponsiveContainer width="100%" height={200}>
                         <AreaChart data={chartData}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                             <XAxis dataKey="name" stroke="#6b7280" fontSize={12} />
@@ -321,7 +321,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
 
             case 'pie':
                 return renderWithOverlay(
-                    <ResponsiveContainer width="100%" height={280}>
+                    <ResponsiveContainer width="100%" height={200}>
                         <PieChart>
                             <Pie
                                 isAnimationActive={false}
@@ -351,7 +351,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
 
             default: // bar chart
                 return renderWithOverlay(
-                    <ResponsiveContainer width="100%" height={280}>
+                    <ResponsiveContainer width="100%" height={200}>
                         <BarChart data={chartData}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                             <XAxis

@@ -212,7 +212,7 @@ export default function DashboardPage() {
                             onDragOver={handleDragOver}
                             onDrop={(e) => handleDrop(e, graphId)}
                             onDragEnd={(e) => handleDragEnd(e, graphId)}
-                            className={`relative group ${heightClass} transition-opacity duration-200 ${colSpanClass} overflow-hidden`}
+                            className={`relative group ${heightClass} transition-opacity duration-200 ${colSpanClass}`}
                         >
                             {/* Remove Button - Hidden during export usually, but html2canvas might capture it if not handled. 
                                 We can use data-html2canvas-ignore attribute to exclude it from PDF. 
