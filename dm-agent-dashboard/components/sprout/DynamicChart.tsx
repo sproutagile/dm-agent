@@ -183,6 +183,34 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
     const renderChart = () => {
         const chartData = widget.data;
 
+        // --- Scorecard / KPI rendering ---
+        if ((widget.type as string) === 'scorecard' || (widget.type as string) === 'kpi') {
+            // data may be the scalar value, or an object { value, trend }
+            const rawValue = typeof chartData === 'object' && chartData !== null && 'value' in chartData
+                ? chartData.value
+                : chartData;
+            const trend = typeof chartData === 'object' && chartData !== null && 'trend' in chartData
+                ? chartData.trend as { value: string; direction: 'up' | 'down' }
+                : undefined;
+
+            return (
+                <div className="flex flex-col justify-center px-2 py-4 min-h-[120px]">
+                    <div className="text-3xl font-bold text-foreground mb-1">
+                        {rawValue ?? '—'}
+                    </div>
+                    {trend && (
+                        <div className={`flex items-center gap-1 text-xs ${trend.direction === 'down' ? 'text-[#22C558]' : 'text-red-600'}`}>
+                            {trend.direction === 'down'
+                                ? <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6" /><polyline points="17 18 23 18 23 12" /></svg>
+                                : <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg>
+                            }
+                            <span>{trend.value}</span>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
         // Only show "No data" if there is NO data AND no error (if error, we show error overlay on top of old data or empty state)
         // Actually, if we have an error and no data, we should probably show the empty state + error.
         // If we have data and error, we show data + error.

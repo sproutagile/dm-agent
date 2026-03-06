@@ -154,35 +154,14 @@ export default function DashboardPage() {
             {/* Dashboard Content - Targeted for PDF Export */}
             <div
                 id="dashboard-content"
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-1" // Added padding to prevent cut-off in PDF
+                className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 p-1"
             >
                 {dashboard.graphs.map((graphId) => {
                     let WidgetContent: React.ReactNode;
 
                     // Check dynamic widgets first
                     if (dynamicWidgets[graphId]) {
-                        const dynWidget = dynamicWidgets[graphId];
-                        // Scorecards from the extension have type 'scorecard' or 'kpi'
-                        // Their data is a scalar/object, NOT an array — must use ScorecardWidget
-                        if (dynWidget.type === 'scorecard' || dynWidget.type === 'kpi') {
-                            const data = dynWidget.data as any;
-                            // data may be the value directly, or an object { value, trend }
-                            const scorecardValue = typeof data === 'object' && data !== null && 'value' in data
-                                ? data.value
-                                : data;
-                            const scorecardTrend = typeof data === 'object' && data !== null && 'trend' in data
-                                ? data.trend
-                                : undefined;
-                            WidgetContent = (
-                                <ScorecardWidget
-                                    title={dynWidget.title}
-                                    value={scorecardValue}
-                                    trend={scorecardTrend}
-                                />
-                            );
-                        } else {
-                            WidgetContent = <DynamicChart widget={dynWidget} />;
-                        }
+                        WidgetContent = <DynamicChart widget={dynamicWidgets[graphId]} />;
                     } else {
                         // Check static library
                         const widget = WIDGET_LIBRARY.find(w => w.id === graphId);
@@ -211,10 +190,15 @@ export default function DashboardPage() {
 
                     if (!WidgetContent) return null;
 
-                    // Determine column span
-                    let colSpan = 1;
-                    if (dynamicWidgets[graphId] && dynamicWidgets[graphId].colSpan) {
-                        colSpan = dynamicWidgets[graphId].colSpan;
+                    // Determine column span based on widget type and colSpan
+                    let colSpanClass = 'col-span-2'; // default: regular chart = 2/6
+                    const dynW = dynamicWidgets[graphId];
+                    if ((dynW?.type as string) === 'scorecard' || (dynW?.type as string) === 'kpi') {
+                        colSpanClass = 'col-span-1'; // scorecard = half-width (1/6)
+                    } else if (dynW?.colSpan === 2) {
+                        colSpanClass = 'col-span-3 md:col-span-4 lg:col-span-3';
+                    } else if (dynW?.colSpan === 3) {
+                        colSpanClass = 'col-span-2 md:col-span-4 lg:col-span-6';
                     }
 
                     return (
@@ -226,8 +210,7 @@ export default function DashboardPage() {
                             onDragOver={handleDragOver}
                             onDrop={(e) => handleDrop(e, graphId)}
                             onDragEnd={(e) => handleDragEnd(e, graphId)}
-                            className={`relative group min-h-[320px] transition-opacity duration-200 ${colSpan === 2 ? 'md:col-span-2' : colSpan === 3 ? 'md:col-span-2 lg:col-span-3' : ''
-                                }`}
+                            className={`relative group min-h-[200px] transition-opacity duration-200 ${colSpanClass}`}
                         >
                             {/* Remove Button - Hidden during export usually, but html2canvas might capture it if not handled. 
                                 We can use data-html2canvas-ignore attribute to exclude it from PDF. 
