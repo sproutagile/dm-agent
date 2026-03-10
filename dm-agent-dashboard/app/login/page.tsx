@@ -41,7 +41,7 @@ export default function LoginPage() {
         <div className="flex min-h-screen bg-white relative">
             {/* Version Number */}
             <div className="absolute bottom-4 left-4 text-xs text-gray-400 z-10">
-                v0.0.3
+                v0.0.4
             </div>
             {/* Left Side: Form */}
             <div className="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24 w-full lg:w-1/2">
