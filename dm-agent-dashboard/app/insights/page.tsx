@@ -183,7 +183,7 @@ export default function InsightsPage() {
                     </p>
                 </div>
             ) : (
-                <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
+                <div className="bg-white rounded-lg border shadow-sm">
                     <table className="w-full text-sm text-left">
                         <thead className="bg-gray-50 text-gray-500 font-medium border-b rounded-t-lg">
                             <tr>
@@ -285,14 +285,34 @@ export default function InsightsPage() {
                                                     </DialogContent>
                                                 </Dialog>
 
-                                                {/* Add to Dashboard — always shows Plus, never changes to Check icon */}
+                                                {/* Add to Dashboard */}
                                                 <div className="relative" ref={selectedGraphForAdd === insight.id ? popoverRef : undefined}>
-                                                    {selectedGraphForAdd === insight.id ? (
-                                                        <div className={`absolute right-0 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50 animate-in fade-in zoom-in-95 duration-200 origin-top-right ${dropdownDirection === 'up'
-                                                                ? 'bottom-full mb-2 origin-bottom-right'
-                                                                : 'top-full mt-2 origin-top-right'
+                                                    {/* The Button is ALWAYS visible */}
+                                                    <Button
+                                                        variant="default"
+                                                        size="sm"
+                                                        className="bg-[#2D3A8C] text-white hover:bg-blue-800"
+                                                        onClick={(e) => {
+                                                            if (selectedGraphForAdd === insight.id) {
+                                                                setSelectedGraphForAdd(null);
+                                                            } else {
+                                                                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                                                const spaceBelow = window.innerHeight - rect.bottom;
+                                                                setDropdownDirection(spaceBelow < 250 ? 'up' : 'down');
+                                                                setSelectedGraphForAdd(insight.id);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Plus className="h-4 w-4" /> Add to Dashboard
+                                                    </Button>
+
+                                                    {/* The Dropdown Menu overlays from the button position */}
+                                                    {selectedGraphForAdd === insight.id && (
+                                                        <div className={`absolute right-0 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-[60] animate-in fade-in zoom-in-95 duration-200 origin-top-right ${dropdownDirection === 'up'
+                                                            ? 'bottom-full mb-2 origin-bottom-right'
+                                                            : 'top-full mt-2 origin-top-right'
                                                             }`}>
-                                                            <div className="px-4 py-2 border-b border-gray-200 bg-gray-50">
+                                                            <div className="px-4 py-2 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                                                                 <p className="text-xs font-semibold text-gray-500 uppercase">Select Dashboard</p>
                                                             </div>
                                                             <div className="max-h-60 overflow-y-auto">
@@ -339,24 +359,9 @@ export default function InsightsPage() {
                                                                 </button>
                                                             </div>
                                                         </div>
-                                                    ) : (
-                                                        // Always shows Plus — click detects position to set dropdown direction
-                                                        <Button
-                                                            variant="default"
-                                                            size="sm"
-                                                            className="bg-[#2D3A8C] text-white hover:bg-blue-800"
-                                                            onClick={(e) => {
-                                                                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                                                const spaceBelow = window.innerHeight - rect.bottom;
-                                                                setDropdownDirection(spaceBelow < 280 ? 'up' : 'down');
-                                                                setSelectedGraphForAdd(insight.id);
-                                                            }}
-                                                            title="Add to Dashboard"
-                                                        >
-                                                            <Plus className="h-4 w-4" />
-                                                        </Button>
                                                     )}
                                                 </div>
+
 
                                                 {/* Delete */}
                                                 <button
