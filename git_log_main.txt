@@ -1,0 +1,30 @@
+﻿commit cc63d89dd14d11f6c7285b5913c3be7b6f3b0c74
+Author: Isaiahpogi17 <isaiahalindada@gmail.com>
+Date:   Thu Mar 5 11:21:03 2026 +0800
+
+    Use The Latest Extension for fixed prompts and graphs
+
+commit 25265d73f6d1f5b6da34b4cd9ccb69dc3894868b
+Author: Isaiahpogi17 <isaiahalindada@gmail.com>
+Date:   Wed Mar 4 16:21:53 2026 +0800
+
+    Ready for testing different n8n workflow
+
+commit 542c968935e0db7f1854fafe1b08535703f58b43
+Author: Isaiahpogi17 <isaiahalindada@gmail.com>
+Date:   Tue Mar 3 11:57:20 2026 +0800
+
+    Fixed auto-refresh and datasources is now included
+
+commit 031848d28da4e751c2952ce1f4daf52d4a8964af
+Merge: 7574929 6c9db13
+Author: Isaiahpogi17 <isaiahalindada@gmail.com>
+Date:   Mon Mar 2 14:15:32 2026 +0800
+
+    Merge branch 'checkpoint'
+
+commit 7574929cfba237519c03046bdafb7e8405370cd7
+Author: Isaiahpogi17 <isaiahalindada@gmail.com>
+Date:   Mon Mar 2 14:15:28 2026 +0800
+
+    Update DB tables for refresh

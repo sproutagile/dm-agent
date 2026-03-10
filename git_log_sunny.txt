@@ -1,0 +1,29 @@
+﻿commit 94bfcd5cc4e260fe8fc9f4b8acff3b46f764f6d7
+Author: isaiahpogi17 <isaiahalindada@gmail.com>
+Date:   Tue Mar 10 11:44:38 2026 +0800
+
+    Total refresh of dm-agent-dashboard folder
+
+commit 446b1f543153b1d432fe37169f1dddc32d3269e5
+Author: Sunny Madridano <sunnymadridano0@gmail.com>
+Date:   Fri Mar 6 13:30:21 2026 +0800
+
+    fix(dashboard): preserve scorecard type and scalar value on data refresh
+
+commit 32c5c779806577dd2fd3f550802153169b1b2faa
+Author: Sunny Madridano <sunnymadridano0@gmail.com>
+Date:   Fri Mar 6 13:23:42 2026 +0800
+
+    fix(dashboard): persist scorecard chart type and restore drag-to-reorder
+
+commit 92a340b1a1ef512d0225a52594ab7dba40162eb5
+Author: Sunny Madridano <sunnymadridano0@gmail.com>
+Date:   Fri Mar 6 13:17:13 2026 +0800
+
+    fix: source pinned to card bottom, content centered vertically, bigger scorecard font, remove redundant X button
+
+commit cc17a29a157760cbeda43315085cd66464b4e3c3
+Author: Sunny Madridano <sunnymadridano0@gmail.com>
+Date:   Fri Mar 6 13:11:41 2026 +0800
+
+    revert: restore clean CSS grid on dashboard, drop react-grid-layout
