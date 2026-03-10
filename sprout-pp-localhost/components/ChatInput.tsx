@@ -64,7 +64,7 @@ export function ChatInput({ onSendMessage, onSummarizeHighlight, disabled = fals
                         type="submit"
                         disabled={!input.trim() || disabled}
                         className={cn(
-                            "sprout-absolute sprout-right-2 sprout-top-1/2 -sprout-translate-y-1/2",
+                            "sprout-absolute sprout-right-2 sprout-bottom-[6px]",
                             "sprout-p-1.5 sprout-rounded-md",
                             "sprout-bg-kangkong-500 sprout-text-white-50",
                             "hover:sprout-bg-kangkong-600",
