@@ -39,3 +39,31 @@ export async function PATCH(req: Request) {
 
     return NextResponse.json({ success: true });
 }
+
+export async function DELETE(req: Request) {
+    if (!(await isAdmin())) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
+    const { userId } = await req.json();
+
+    if (!userId) {
+        return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    }
+
+    const db = await getDb();
+
+    // Check if the user trying to be deleted is an admin
+    const userToDelete = await db.get('SELECT system_role FROM users WHERE id = ?', userId);
+    if (!userToDelete) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    if (userToDelete.system_role === 'ADMIN') {
+        return NextResponse.json({ error: 'Cannot delete admin users' }, { status: 403 });
+    }
+
+    await db.run('DELETE FROM users WHERE id = ?', userId);
+
+    return NextResponse.json({ success: true });
+}

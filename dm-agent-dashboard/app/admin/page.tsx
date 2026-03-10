@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Trash2 } from 'lucide-react';
 
 interface User {
     id: string;
@@ -15,6 +17,7 @@ interface User {
 
 export default function AdminPage() {
     const [users, setUsers] = useState<User[]>([]);
+    const [userToDelete, setUserToDelete] = useState<string | null>(null);
     const router = useRouter();
 
     useEffect(() => {
@@ -42,6 +45,24 @@ export default function AdminPage() {
             body: JSON.stringify({ userId, status }),
         });
         fetchUsers();
+    };
+
+    const handleDeleteUser = async (userId: string) => {
+        try {
+            const res = await fetch('/api/admin/users', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId }),
+            });
+
+            if (res.ok) {
+                fetchUsers();
+            } else {
+                console.error('Failed to delete user');
+            }
+        } catch (error) {
+            console.error('Error deleting user', error);
+        }
     };
 
     return (
@@ -72,35 +93,58 @@ export default function AdminPage() {
                                 <td className="px-6 py-4 whitespace-nowrap">{user.email}</td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
-                                            user.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
-                                                'bg-yellow-100 text-yellow-800'
+                                        user.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                                            'bg-yellow-100 text-yellow-800'
                                         }`}>
                                         {user.status}
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                                    {user.status === 'PENDING' && (
-                                        <>
-                                            <button
-                                                onClick={() => handleStatusChange(user.id, 'APPROVED')}
-                                                className="text-green-600 hover:text-green-900"
-                                            >
-                                                Approve
-                                            </button>
-                                            <button
-                                                onClick={() => handleStatusChange(user.id, 'REJECTED')}
-                                                className="text-red-600 hover:text-red-900"
-                                            >
-                                                Reject
-                                            </button>
-                                        </>
-                                    )}
+                                    <div className="flex items-center gap-3">
+                                        {user.status === 'PENDING' && (
+                                            <>
+                                                <button
+                                                    onClick={() => handleStatusChange(user.id, 'APPROVED')}
+                                                    className="text-green-600 hover:text-green-900"
+                                                >
+                                                    Approve
+                                                </button>
+                                                <button
+                                                    onClick={() => handleStatusChange(user.id, 'REJECTED')}
+                                                    className="text-red-600 hover:text-red-900"
+                                                >
+                                                    Reject
+                                                </button>
+                                            </>
+                                        )}
+                                        <button
+                                            onClick={() => setUserToDelete(user.id)}
+                                            className="text-red-500 hover:text-red-700 ml-auto"
+                                            title="Delete User"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
+
+            <ConfirmDialog
+                isOpen={!!userToDelete}
+                onOpenChange={(open) => !open && setUserToDelete(null)}
+                title="Delete User Account"
+                description="Are you sure you want to completely delete this user's account? This action cannot be undone."
+                confirmText="Delete Account"
+                onConfirm={() => {
+                    if (userToDelete) {
+                        handleDeleteUser(userToDelete);
+                        setUserToDelete(null);
+                    }
+                }}
+            />
         </div>
     );
 }
