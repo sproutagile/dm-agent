@@ -188,7 +188,7 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
     // reset state when entering edit mode
     const startEditing = () => {
         setEditTitle(widget.title);
-        setEditType(widget.chartType || 'bar');
+        setEditType(widget.chartType || widget.type || 'bar');
         setEditColSpan(widget.colSpan || 1);
         setEditWebhook(widget.webhookEndpoint || '');
         setEditRefreshInterval(widget.refreshInterval || 0);
@@ -441,44 +441,46 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                         </div>
                     </div>
 
-                    <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                            <label className="text-sm font-medium">Data Points</label>
-                            <span className="text-xs text-muted-foreground">Label | Value</span>
+                    {!(editType === 'scorecard' || editType === 'kpi') && (
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <label className="text-sm font-medium">Data Points</label>
+                                <span className="text-xs text-muted-foreground">Label | Value</span>
+                            </div>
+                            <div className="max-h-60 overflow-y-auto space-y-2 border rounded-md p-2 bg-gray-50">
+                                {dataRows.map((row, index) => (
+                                    <div key={index} className="flex gap-2 items-center">
+                                        <input
+                                            className="flex-1 p-2 border rounded-md text-sm"
+                                            placeholder="Label"
+                                            value={row.name || ''}
+                                            onChange={(e) => handleDataChange(index, 'name', e.target.value)}
+                                        />
+                                        <input
+                                            className="w-20 p-2 border rounded-md text-sm"
+                                            placeholder="Value"
+                                            type="number"
+                                            value={row.value || ''}
+                                            onChange={(e) => handleDataChange(index, 'value', e.target.value)}
+                                        />
+                                        <button
+                                            onClick={() => setRowToDelete(index)}
+                                            className="p-2 text-red-500 hover:bg-red-50 rounded-md"
+                                            title="Remove"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                                <button
+                                    onClick={handleAddRow}
+                                    className="w-full py-2 border-2 border-dashed border-gray-300 rounded-md text-gray-500 hover:border-blue-500 hover:text-blue-600 text-sm flex items-center justify-center gap-2"
+                                >
+                                    <Plus className="h-4 w-4" /> Add Data Point
+                                </button>
+                            </div>
                         </div>
-                        <div className="max-h-60 overflow-y-auto space-y-2 border rounded-md p-2 bg-gray-50">
-                            {dataRows.map((row, index) => (
-                                <div key={index} className="flex gap-2 items-center">
-                                    <input
-                                        className="flex-1 p-2 border rounded-md text-sm"
-                                        placeholder="Label"
-                                        value={row.name || ''}
-                                        onChange={(e) => handleDataChange(index, 'name', e.target.value)}
-                                    />
-                                    <input
-                                        className="w-20 p-2 border rounded-md text-sm"
-                                        placeholder="Value"
-                                        type="number"
-                                        value={row.value || ''}
-                                        onChange={(e) => handleDataChange(index, 'value', e.target.value)}
-                                    />
-                                    <button
-                                        onClick={() => setRowToDelete(index)}
-                                        className="p-2 text-red-500 hover:bg-red-50 rounded-md"
-                                        title="Remove"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </button>
-                                </div>
-                            ))}
-                            <button
-                                onClick={handleAddRow}
-                                className="w-full py-2 border-2 border-dashed border-gray-300 rounded-md text-gray-500 hover:border-blue-500 hover:text-blue-600 text-sm flex items-center justify-center gap-2"
-                            >
-                                <Plus className="h-4 w-4" /> Add Data Point
-                            </button>
-                        </div>
-                    </div>
+                    )}
 
                     <div className="space-y-2 pt-2 border-t">
                         <h4 className="text-sm font-medium">Auto-Refresh</h4>
