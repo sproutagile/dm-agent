@@ -114,10 +114,13 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                             n.name && originalPoint.name &&
                             n.name.toString().toLowerCase() === originalPoint.name.toString().toLowerCase()
                         );
+                        // Make sure to preserve all properties like 'fill', 'label', etc.
+                        const { name, value, ...restProps } = originalPoint;
                         const byIndex = newData[index];
                         const resolved = byName || byIndex;
                         return {
-                            ...originalPoint,
+                            ...restProps, // Keeps widget sizes, colors, etc.
+                            name: originalPoint.name, // Keep the original formatted name
                             value: resolved?.value !== undefined ? resolved.value : originalPoint.value
                         };
                     })
