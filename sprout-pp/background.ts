@@ -141,6 +141,9 @@ async function callN8nWebhook(webhookUrl: string, text: string, sessionId: strin
             }
         }
 
+        // Inject the original question here so clients can save it
+        parsedResponse.original_query = text;
+
         console.log('[Sprout Extension] Parsed Response:', JSON.stringify(parsedResponse, null, 2))
 
         return {

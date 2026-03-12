@@ -28,18 +28,26 @@ async function getUser() {
  *   3. Plain obj: {planned: 35, unplanned: 9}  → converts keys to entries
  *   4. String numbers: [{name: "X", value: "35"}]  → parses strings
  */
-function flattenToNameValueArray(data: any): { name: string; value: number }[] {
-    const result: { name: string; value: number }[] = [];
+function flexParseData(data: any): any {
+    // If it's the Sprout Dashboard schema
+    if (data && data.type && data.data !== undefined) {
+        if (data.type === 'scorecard' || data.type === 'kpi') {
+            // Return a single element array for uniform handling or just the object
+            // Actually, returning the object itself is better, but the legacy expects an array.
+            // Let's return the object so we can use its 'value' and 'trend' exactly as provided.
+            return data.data; 
+        } else if ((data.type === 'chart' || data.type === 'table') && Array.isArray(data.data)) {
+            return data.data; // Return the array of data points
+        }
+    }
 
-    // Case 3: plain object (not array) → convert keys to entries
+    // Legacy fallback parsing logic for flat arrays / objects
+    const result: { name: string; value: number | string }[] = [];
+
     if (!Array.isArray(data) && typeof data === 'object') {
         for (const [key, val] of Object.entries(data)) {
-            if (key === 'output' || key === 'message') continue; // skip n8n wrapper keys
-            const num = typeof val === 'number' ? val : parseFloat(String(val));
-            if (!isNaN(num)) {
-                const label = key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
-                result.push({ name: label, value: num });
-            }
+            if (key === 'output' || key === 'message') continue;
+            result.push({ name: key, value: String(val) });
         }
         return result;
     }
@@ -49,23 +57,12 @@ function flattenToNameValueArray(data: any): { name: string; value: number }[] {
     for (const item of data) {
         if (!item || typeof item !== 'object') continue;
 
-        if (typeof item.value === 'number' && isFinite(item.value)) {
-            // Case 1: standard format
+        if ('value' in item) {
             result.push({ name: String(item.name || ''), value: item.value });
-
-        } else if (typeof item.value === 'string') {
-            // Case 4: string number
-            const num = parseFloat(item.value);
-            if (!isNaN(num)) result.push({ name: String(item.name || ''), value: num });
-
-        } else if (typeof item.value === 'object' && item.value !== null && !Array.isArray(item.value)) {
-            // Case 2: nested object — explode into multiple entries
-            for (const [key, val] of Object.entries(item.value as Record<string, unknown>)) {
-                const num = typeof val === 'number' ? val : parseFloat(String(val));
-                if (!isNaN(num)) {
-                    const label = key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
-                    result.push({ name: label, value: num });
-                }
+        } else {
+            // Explode object
+            for (const [key, val] of Object.entries(item as Record<string, unknown>)) {
+                result.push({ name: key, value: String(val) });
             }
         }
     }
@@ -107,8 +104,12 @@ export async function POST(req: Request) {
 
         console.log(`[Refresh] Using pinned source pointer for widget ${widgetId}:`, JSON.stringify(pointer));
 
+        // If we saved the original question that generated this widget, pass it along
+        // so the AI knows if it needs to average/sum the data instead of just returning raw latest data.
+        const originalQuery = widgetData.original_query ? `Original Context: "${widgetData.original_query}"` : '';
+
         // Build a short, targeted prompt — much cheaper than a full AI re-prompt
-        const targetedPrompt = `Fetch the CURRENT data from this exact source and return ONLY a raw JSON array of objects with "name" and "value" keys. No other text. Source: [SOURCE: ${pointer.source_system} | ID: ${pointer.source_id} | TAB: ${pointer.source_tab} | CELL: ${pointer.source_cell} | KEY: ${pointer.key}]`;
+        const targetedPrompt = `Fetch the CURRENT data from this exact source using the exact same Sprout MBR Dashboard schema. ${originalQuery} Source: [SOURCE: ${pointer.source_system} | ID: ${pointer.source_id} | TAB: ${pointer.source_tab} | CELL: ${pointer.source_cell} | KEY: ${pointer.key}]`;
 
         const webhookUrl = DEFAULT_WEBHOOK_URL;
 
@@ -171,15 +172,19 @@ export async function POST(req: Request) {
             return NextResponse.json({ fallback: true });
         }
 
-        // Normalize data to a flat [{name, value}] array regardless of AI response format
-        const normalized = flattenToNameValueArray(data);
+        // Normalize data
+        const normalized = flexParseData(data);
 
-        if (normalized.length === 0) {
-            console.warn('[Refresh] Normalized data is empty. Falling back.');
+        // For arrays, verify it's not empty. For scorecard objects, verify value exists.
+        if (Array.isArray(normalized) && normalized.length === 0) {
+            console.warn('[Refresh] Normalized data is empty array. Falling back.');
+            return NextResponse.json({ fallback: true });
+        } else if (!Array.isArray(normalized) && (normalized.value === undefined && normalized.title === undefined)) {
+            console.warn('[Refresh] Normalized data is empty object. Falling back.');
             return NextResponse.json({ fallback: true });
         }
 
-        console.log(`[Refresh] Successfully fetched ${normalized.length} data points for widget ${widgetId}`);
+        console.log(`[Refresh] Successfully fetched refreshed data for widget ${widgetId}`);
         return NextResponse.json(normalized);
 
     } catch (error: unknown) {

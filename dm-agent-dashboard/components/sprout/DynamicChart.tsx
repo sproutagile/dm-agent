@@ -89,14 +89,18 @@ export function DynamicChart({ widget, onRemove }: DynamicChartProps) {
                 return;
             }
 
-            const newData = Array.isArray(refreshData) ? refreshData : (refreshData.data || []);
+            // api/refresh returns either the exact object (for scorecards) or an array (for charts)
+            const newData = Array.isArray(refreshData) 
+                ? refreshData 
+                : (refreshData.data ? refreshData.data : refreshData); // if refreshData directly contains the object
+
             const isScorecard = (widget.type as string) === 'scorecard' || (widget.type as string) === 'kpi';
 
             if (isScorecard) {
-                // For scorecards, grab the first value from the returned array and preserve trend info if any
+                // For scorecards, grab the value directly, or the first array item if it's formatted as an array
                 const scalarValue = Array.isArray(newData) && newData.length > 0 ? newData[0].value : newData;
                 const updatedData = typeof widget.data === 'object' && widget.data !== null && !Array.isArray(widget.data)
-                    ? { ...widget.data, value: scalarValue }
+                    ? { ...widget.data, value: scalarValue.value !== undefined ? scalarValue.value : scalarValue }
                     : scalarValue;
 
                 updateDynamicWidget(widget.id, { data: updatedData, source_pointer: widget.source_pointer });
